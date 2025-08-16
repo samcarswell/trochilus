@@ -4,23 +4,59 @@ Copyright © 2025 Samuel Carswell <samuelrcarswell@gmail.com>
 package cmd
 
 import (
+	"fmt"
+	"io"
+	"log/slog"
 	"os"
+	"path"
+	"strings"
+	"time"
 
+	"carswellpress.com/cron-cowboy/config"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "cron-cowboy",
 	Short: "Simple cron monitoring",
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		setupContext(cmd)
+	},
 }
+
+func setupContext(cmd *cobra.Command) {
+	logDir, err := config.GetLogDir()
+	if err != nil {
+		panic(err)
+	}
+	err = os.MkdirAll(logDir, os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
+
+	f, err := os.Create(path.Join(logDir, "cc_"+time.Now().UTC().Format("20060102T150405")+".log"))
+	if err != nil {
+		panic(err)
+	}
+	logFile, _ := os.OpenFile(f.Name(), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	l := slog.New(slog.NewTextHandler(io.MultiWriter(logFile, os.Stdout), &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}))
+	l.Info("Logging to " + logFile.Name())
+
+	cmd.SetContext(config.ContextWithLogger(cmd.Context(), l))
+	cmd.SetContext(config.ContextWithLogFile(cmd.Context(), logFile.Name()))
+	cmd.SetContext(config.ContextWithSchema(cmd.Context(), SqlSchema))
+}
+
+var SqlSchema string
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
+func Execute(sqlSchema string) {
+	SqlSchema = sqlSchema
 	err := RootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
@@ -33,6 +69,22 @@ func init() {
 	// will be global for your application.
 
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cron-cowboy.yaml)")
+	viper.SetEnvPrefix("ZEUS")
+	replacer := strings.NewReplacer(".", "_")
+	viper.SetEnvKeyReplacer(replacer)
+
+	viper.SetDefault("DatabasePath", "$HOME/.config/cron-cowboy/cc.db")
+	viper.SetDefault("LogDir", "$TMPDIR")
+	viper.AddConfigPath("$HOME/.config/cron-cowboy")
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
+	viper.AutomaticEnv()
+	err := viper.ReadInConfig() // Find and read the config file
+	if err != nil {             // Handle errors reading the config file
+		fmt.Errorf("fatal error config file: %w", err)
+	}
+	slackToken := viper.GetString("slack.token")
+	fmt.Println(slackToken)
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.

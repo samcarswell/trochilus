@@ -1,0 +1,51 @@
+package cmd
+
+import (
+	"context"
+
+	"carswellpress.com/cron-cowboy/config"
+	"carswellpress.com/cron-cowboy/core"
+	"github.com/rodaine/table"
+	"github.com/spf13/cobra"
+)
+
+var listCmd = &cobra.Command{
+	Use:   "list",
+	Short: "Lists runs",
+	Run: func(cmd *cobra.Command, args []string) {
+		queries := config.GetDatabase(cmd.Context())
+
+		runRows, err := queries.GetRuns(context.Background())
+		if err != nil {
+			panic(err)
+		}
+		tbl := table.New(
+			"ID",
+			"Cron Name",
+			"Start Time",
+			"End Time",
+			"Stdout Log File",
+			"Stderr Log File",
+			"Exec Log File",
+			"Succeeded",
+		)
+		for _, run := range runRows {
+			tbl.AddRow(
+				run.Run.ID,
+				run.Cron.Name,
+				run.Run.StartTime,
+				run.Run.EndTime,
+				run.Run.StdoutLogFile,
+				run.Run.StderrLogFile,
+				run.Run.ExecLogFile,
+				core.FormatSucceeded(run.Run.Succeeded),
+			)
+		}
+		tbl.Print()
+
+	},
+}
+
+func init() {
+	RunCmd.AddCommand(listCmd)
+}

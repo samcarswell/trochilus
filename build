@@ -1,0 +1,5 @@
+#!/bin/bash
+
+cd $CC_REPO
+
+go build -o ~/.local/bin/cron-cowboy main.go
