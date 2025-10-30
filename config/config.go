@@ -3,11 +3,13 @@ package config
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"log/slog"
 	"os"
 	"path"
 	"strings"
 
+	"carswellpress.com/cron-cowboy/core"
 	"carswellpress.com/cron-cowboy/data"
 	"github.com/spf13/viper"
 	_ "modernc.org/sqlite"
@@ -79,6 +81,31 @@ func GetDatabase(ctx context.Context) *data.Queries {
 	}
 
 	return data.New(db)
+}
+
+func GetLoggerOrExit(ctx context.Context) *slog.Logger {
+	logger, ok := LoggerFromContext(ctx)
+	if !ok {
+		// Should this be a panic?
+		panic("Could not get logger from context")
+	}
+	return logger
+}
+
+func GetLogFileOrExit(logger *slog.Logger, ctx context.Context) string {
+	logFile, ok := LogFileFromContext(ctx)
+	if !ok {
+		core.LogErrorAndExit(logger, errors.New("Could not get logFile from context"))
+	}
+	return logFile
+}
+
+func GetSlackToken() string {
+	return viper.GetString("slack.token")
+}
+
+func GetSlackChannel() string {
+	return viper.GetString("slack.channel")
 }
 
 type loggerKey struct{}

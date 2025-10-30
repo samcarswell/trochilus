@@ -6,7 +6,9 @@ package cmd
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"strconv"
@@ -14,44 +16,44 @@ import (
 
 	"carswellpress.com/cron-cowboy/cmd"
 	"carswellpress.com/cron-cowboy/config"
+	"carswellpress.com/cron-cowboy/core"
 	"carswellpress.com/cron-cowboy/data"
 	"carswellpress.com/cron-cowboy/notify"
+	"carswellpress.com/cron-cowboy/opts"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
-// TODO: should maybe have an optional flag on this to skip crontab lookup
-// execCmd represents the run command
+// While *OrExit is useful for most commands, exec actually needs to
+// try it's best to recover: it should try to get least get a message to the slack channel notifying of a failure.
+// For now I'm just going to assume there's no errors. But this should
+// be revisited before a v1
 var execCmd = &cobra.Command{
 	Use:   "exec",
 	Short: "Run a CRON command",
 	Run: func(cmd *cobra.Command, args []string) {
-		cronName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			panic("Could not get cron name")
+		logger := config.GetLoggerOrExit(cmd.Context())
+		cronName := opts.GetStringOptOrExit(logger, cmd, "cron-name")
+		skipCrontab := opts.GetBoolOptOrExit(logger, cmd, "skip-crontab")
+		notifyOpt := opts.GetBoolOptOrExit(logger, cmd, "notify")
+		slackToken := config.GetSlackToken()
+		if notifyOpt && slackToken == "" {
+			core.LogErrorAndExit(logger, errors.New("notify is set but slack.token is blank."))
 		}
-		skipCrontab, err := cmd.Flags().GetBool("skip-crontab")
-		if err != nil {
-			panic("Could not get skip-crontab flag")
+		channel := config.GetSlackChannel()
+		if notifyOpt && channel == "" {
+			core.LogErrorAndExit(logger, errors.New("notify is set but slack.channel is blank."))
 		}
 
-		logger, ok := config.LoggerFromContext(cmd.Context())
-		if !ok {
-			panic("Could not get logger from context")
-		}
-		logFile, ok := config.LogFileFromContext(cmd.Context())
-		if !ok {
-			panic("Could not get logFile from context")
-		}
+		logFile := config.GetLogFileOrExit(logger, cmd.Context())
 
 		if len(args) == 0 {
-			logger.Error("Must provide args")
-			os.Exit(1)
+			core.LogErrorAndExit(logger, errors.New("Must provide args"))
 		}
 
-		crons := getCrontab()
-
-		// TODO: need to do a database lookup on the cron name here
+		crons, err := core.GetCrontabItems(logger)
+		if err != nil {
+			core.LogErrorAndExit(logger, err)
+		}
 
 		found := false
 		for _, value := range crons {
@@ -59,11 +61,10 @@ var execCmd = &cobra.Command{
 				found = true
 			}
 		}
-		if !found {
-			// TODO: we might be able to continue here
-			if !skipCrontab {
-				panic("Unable to find cron defined with name " + cronName)
-			}
+		if !found && !skipCrontab {
+			core.LogErrorAndExit(logger,
+				errors.New("Unable to find cron defined with name "+cronName),
+			)
 		}
 
 		queries := config.GetDatabase(cmd.Context())
@@ -72,14 +73,14 @@ var execCmd = &cobra.Command{
 			if err == sql.ErrNoRows {
 				logger.Info("Cron not registered")
 			} else {
-				panic(err)
+				core.LogErrorAndExit(logger, err)
 			}
 		}
 		if cronRow == (data.GetCronRow{}) {
 			logger.Info("Registering cron")
 			id, err := queries.CreateCron(context.Background(), cronName)
 			if err != nil {
-				panic(err)
+				core.LogErrorAndExit(logger, err)
 			}
 			cronRow.Cron.Name = cronName
 			cronRow.Cron.ID = id
@@ -138,92 +139,30 @@ var execCmd = &cobra.Command{
 		})
 		logger.Info("Run " + strconv.FormatInt(runId, 10) + " completed. Success: " + strconv.FormatBool(succeeded))
 
-		slackToken := viper.GetString("slack.token")
-		fmt.Println(slackToken)
-
 		completedRun, err := queries.GetRun(cmd.Context(), runId)
 		if err != nil {
-			panic(err)
+			log.Fatalf("Unable to get completed run %s", err)
 		}
 
-		ok, err = notify.NotifyRunSlack(slackToken, "social", completedRun)
-		if err != nil {
-			panic(err)
-		}
-		if !ok {
-			panic("Unable to notify slack")
+		if notifyOpt {
+			ok, err := notify.NotifyRunSlack(slackToken, channel, completedRun)
+			if err != nil {
+				log.Fatalf("Unable to notify slack %s", err)
+			}
+			if !ok {
+				logger.Error("Command was run, but slack was unable to be notified")
+			}
 		}
 	},
-}
-
-type cronItem struct {
-	Name string
-}
-
-func getCrontab() []cronItem {
-	runCmd := exec.Command("crontab", "-l")
-	stdout, err := runCmd.Output()
-	strOutput := string(stdout)
-	if err != nil {
-		// TODO: this should actually check that the crontab does not exist
-		fmt.Println(string(stdout))
-		os.Exit(1)
-	}
-	return parseCrontab(strOutput)
-}
-
-// test for commented lines
-func parseCrontab(crontab string) []cronItem {
-	cronRows := strings.Split(crontab, "\n")
-	cronItems := []cronItem{}
-	for _, value := range cronRows {
-		cronRow := parseRow(value)
-		if cronRow == nil {
-			continue
-		}
-		cronItems = append(cronItems, *cronRow)
-	}
-	return cronItems
-
-}
-
-func parseRow(value string) *cronItem {
-	// TODO: this will break as soon as options are swapped
-	const cronDef = "cron-cowboy exec --name"
-	rowStr := strings.TrimSpace(value)
-	if len(rowStr) == 0 {
-		return nil
-	}
-	if strings.HasPrefix(rowStr, "#") {
-		return nil
-	}
-	if !strings.Contains(rowStr, cronDef) {
-		return nil
-	}
-
-	fragments := strings.Split(rowStr, cronDef)
-	if len(fragments) < 2 {
-		panic("TODO: Issue with crontab config")
-	}
-	name := strings.Split(strings.TrimSpace(fragments[1]), " ")[0]
-	name = strings.ReplaceAll(name, "\"", "")
-	name = strings.ReplaceAll(name, "'", "")
-	return &cronItem{Name: name}
 }
 
 func init() {
 	cmd.RootCmd.AddCommand(execCmd)
 
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	execCmd.Flags().String("name", "", "Cron Name")
-	if err := execCmd.MarkFlagRequired("name"); err != nil {
+	execCmd.Flags().String("cron-name", "", "Cron Name")
+	if err := execCmd.MarkFlagRequired("cron-name"); err != nil {
 		panic(err)
 	}
 	execCmd.Flags().Bool("skip-crontab", false, "Skips checking of crontab for registered CRON")
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// runCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	execCmd.Flags().Bool("notify", false, "Notifies of the exec success")
 }
