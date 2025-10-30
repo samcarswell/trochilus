@@ -7,12 +7,13 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"carswellpress.com/cron-cowboy/cmd"
 	"carswellpress.com/cron-cowboy/config"
@@ -20,6 +21,7 @@ import (
 	"carswellpress.com/cron-cowboy/data"
 	"carswellpress.com/cron-cowboy/notify"
 	"carswellpress.com/cron-cowboy/opts"
+	"github.com/gofrs/flock"
 	"github.com/spf13/cobra"
 )
 
@@ -66,6 +68,24 @@ var execCmd = &cobra.Command{
 				errors.New("Unable to find cron defined with name "+cronName),
 			)
 		}
+
+		// TODO: lock dir should be configurable
+		lockFile := filepath.Join(os.TempDir(), cronName+".lock")
+		f := flock.New(lockFile)
+
+		locked, err := f.TryLock()
+
+		if err != nil {
+			// TODO: this needs to talk to slack. We probably need another
+			// type of run; skipped runs. For now I'll just exit 1
+			log.Fatalf("Unable to create lock for cron. Likely already running: %s", err)
+		}
+		if !locked {
+			log.Fatalf("Unable to create lock for cron. Likely already running")
+		}
+
+		defer f.Unlock()
+		logger.Info("Created cron lock at " + lockFile)
 
 		queries := config.GetDatabase(cmd.Context())
 		cronRow, err := queries.GetCron(context.Background(), cronName)
@@ -122,8 +142,7 @@ var execCmd = &cobra.Command{
 
 		logger.Info("Run created with ID " + strconv.FormatInt(runId, 10))
 
-		// time.Sleep(2 * time.Second)
-		fmt.Println(args)
+		time.Sleep(10 * time.Second)
 		cmdArgs := strings.Split(args[0], " ")
 		runCmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
 		runCmd.Stdout = stdoutLog

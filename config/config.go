@@ -116,6 +116,7 @@ func ContextWithLogger(ctx context.Context, logger *slog.Logger) context.Context
 	return context.WithValue(ctx, loggerKey{}, logger)
 }
 
+// TODO: the logger dones't always seem to send all logs.
 func LoggerFromContext(ctx context.Context) (*slog.Logger, bool) {
 	dbConn, ok := ctx.Value(loggerKey{}).(*slog.Logger)
 	return dbConn, ok
