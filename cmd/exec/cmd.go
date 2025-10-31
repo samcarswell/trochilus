@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"carswellpress.com/cron-cowboy/cmd"
 	"carswellpress.com/cron-cowboy/config"
@@ -132,7 +131,7 @@ var execCmd = &cobra.Command{
 
 		logger.Info("Run created with ID " + strconv.FormatInt(runId, 10))
 
-		time.Sleep(10 * time.Second)
+		// time.Sleep(10 * time.Second)
 		cmdArgs := strings.Split(args[0], " ")
 		runCmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
 		runCmd.Stdout = stdoutLog

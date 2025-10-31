@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"carswellpress.com/cron-cowboy/core"
 	"carswellpress.com/cron-cowboy/data"
@@ -20,29 +21,14 @@ type slackResp struct {
 	Error string `json:"error"`
 }
 
-type runNotifyRow struct {
-	Cron      string `json:"cron"`
-	Run       int64  `json:"run"`
-	SysLog    string `json:"sysLog"`
-	Log       string `json:"stdout"`
-	Succeeded string `json:"succeeded"`
-}
-
 const slackPostMessage = "https://slack.com/api/chat.postMessage"
 
 func NotifyRunSlack(token string, channel string, run data.GetRunRow) (bool, error) {
-	runNotifyRow := runNotifyRow{
-		Cron:      run.Cron.Name,
-		Run:       run.Run.ID,
-		SysLog:    run.Run.ExecLogFile,
-		Log:       run.Run.LogFile,
-		Succeeded: core.FormatSucceeded(run.Run.Succeeded),
-	}
-	runNotifyRowJson, err := json.Marshal(runNotifyRow)
-	if err != nil {
-		return false, err
-	}
-	return NotifySlack(token, channel, string(runNotifyRowJson))
+	slackStr := "*" + run.Cron.Name + "*: run " +
+		strconv.FormatInt(run.Run.ID, 10) + " " +
+		core.FormatSucceeded(run.Run.Succeeded) + "\n" +
+		"Log: `" + run.Run.LogFile + "`\nSystem Log: `" + run.Run.ExecLogFile + "`"
+	return NotifySlack(token, channel, slackStr)
 }
 
 func NotifySlack(token string, channel string, text string) (bool, error) {

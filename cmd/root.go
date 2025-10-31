@@ -83,8 +83,6 @@ func init() {
 	if err != nil {             // Handle errors reading the config file
 		fmt.Errorf("fatal error config file: %w", err)
 	}
-	slackToken := viper.GetString("slack.token")
-	fmt.Println(slackToken)
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
