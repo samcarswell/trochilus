@@ -115,26 +115,16 @@ var execCmd = &cobra.Command{
 		if err != nil {
 			panic(err)
 		}
-		stderr, err := os.CreateTemp(dir, "stderr.*.log")
-		if err != nil {
-			panic(err)
-		}
 		stdoutLog, err := os.OpenFile(stdout.Name(), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
 		if err != nil {
 			panic(err)
 		}
-		stderrLog, err := os.OpenFile(stderr.Name(), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
-		if err != nil {
-			panic(err)
-		}
 
-		logger.Info("Stdout log created at: " + stdout.Name())
-		logger.Info("Stderr log created at: " + stderr.Name())
+		logger.Info("Run log created at: " + stdout.Name())
 		runId, err := queries.StartRun(context.Background(), data.StartRunParams{
-			CronID:        cronRow.Cron.ID,
-			StdoutLogFile: stdout.Name(),
-			StderrLogFile: stderr.Name(),
-			ExecLogFile:   logFile,
+			CronID:      cronRow.Cron.ID,
+			LogFile:     stdout.Name(),
+			ExecLogFile: logFile,
 		})
 		if err != nil {
 			panic(err)
@@ -146,7 +136,7 @@ var execCmd = &cobra.Command{
 		cmdArgs := strings.Split(args[0], " ")
 		runCmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
 		runCmd.Stdout = stdoutLog
-		runCmd.Stderr = stderrLog
+		runCmd.Stderr = stdoutLog
 		err = runCmd.Run()
 		succeeded := true
 		if err != nil {

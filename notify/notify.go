@@ -24,8 +24,7 @@ type runNotifyRow struct {
 	Cron      string `json:"cron"`
 	Run       int64  `json:"run"`
 	SysLog    string `json:"sysLog"`
-	Stdout    string `json:"stdout"`
-	Stderr    string `json:"stderr"`
+	Log       string `json:"stdout"`
 	Succeeded string `json:"succeeded"`
 }
 
@@ -36,8 +35,7 @@ func NotifyRunSlack(token string, channel string, run data.GetRunRow) (bool, err
 		Cron:      run.Cron.Name,
 		Run:       run.Run.ID,
 		SysLog:    run.Run.ExecLogFile,
-		Stdout:    run.Run.StdoutLogFile,
-		Stderr:    run.Run.StderrLogFile,
+		Log:       run.Run.LogFile,
 		Succeeded: core.FormatSucceeded(run.Run.Succeeded),
 	}
 	runNotifyRowJson, err := json.Marshal(runNotifyRow)

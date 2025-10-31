@@ -92,7 +92,7 @@ func (q *Queries) GetCrons(ctx context.Context) ([]GetCronsRow, error) {
 
 const getRun = `-- name: GetRun :one
 select
-    runs.id, runs.cron_id, runs.start_time, runs.end_time, runs.stdout_log_file, runs.stderr_log_file, runs.exec_log_file, runs.succeeded,
+    runs.id, runs.cron_id, runs.start_time, runs.end_time, runs.log_file, runs.exec_log_file, runs.succeeded,
     crons.id, crons.name
 from runs, crons
 where runs.cron_id = crons.id
@@ -112,8 +112,7 @@ func (q *Queries) GetRun(ctx context.Context, id int64) (GetRunRow, error) {
 		&i.Run.CronID,
 		&i.Run.StartTime,
 		&i.Run.EndTime,
-		&i.Run.StdoutLogFile,
-		&i.Run.StderrLogFile,
+		&i.Run.LogFile,
 		&i.Run.ExecLogFile,
 		&i.Run.Succeeded,
 		&i.Cron.ID,
@@ -124,7 +123,7 @@ func (q *Queries) GetRun(ctx context.Context, id int64) (GetRunRow, error) {
 
 const getRuns = `-- name: GetRuns :many
 select
-    runs.id, runs.cron_id, runs.start_time, runs.end_time, runs.stdout_log_file, runs.stderr_log_file, runs.exec_log_file, runs.succeeded,
+    runs.id, runs.cron_id, runs.start_time, runs.end_time, runs.log_file, runs.exec_log_file, runs.succeeded,
     crons.id, crons.name
 from runs, crons
 where runs.cron_id = crons.id
@@ -149,8 +148,7 @@ func (q *Queries) GetRuns(ctx context.Context) ([]GetRunsRow, error) {
 			&i.Run.CronID,
 			&i.Run.StartTime,
 			&i.Run.EndTime,
-			&i.Run.StdoutLogFile,
-			&i.Run.StderrLogFile,
+			&i.Run.LogFile,
 			&i.Run.ExecLogFile,
 			&i.Run.Succeeded,
 			&i.Cron.ID,
@@ -184,25 +182,19 @@ func (q *Queries) IsRunFinished(ctx context.Context, id int64) (bool, error) {
 
 const startRun = `-- name: StartRun :one
 insert into runs
-    (cron_id, start_time, stdout_log_file, stderr_log_file, exec_log_file)
-values (?, current_timestamp, ?, ?, ?)
+    (cron_id, start_time, log_file, exec_log_file)
+values (?, current_timestamp, ?, ?)
 returning id
 `
 
 type StartRunParams struct {
-	CronID        int64
-	StdoutLogFile string
-	StderrLogFile string
-	ExecLogFile   string
+	CronID      int64
+	LogFile     string
+	ExecLogFile string
 }
 
 func (q *Queries) StartRun(ctx context.Context, arg StartRunParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, startRun,
-		arg.CronID,
-		arg.StdoutLogFile,
-		arg.StderrLogFile,
-		arg.ExecLogFile,
-	)
+	row := q.db.QueryRowContext(ctx, startRun, arg.CronID, arg.LogFile, arg.ExecLogFile)
 	var id int64
 	err := row.Scan(&id)
 	return id, err

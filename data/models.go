@@ -15,12 +15,11 @@ type Cron struct {
 }
 
 type Run struct {
-	ID            int64
-	CronID        int64
-	StartTime     time.Time
-	EndTime       sql.NullTime
-	StdoutLogFile string
-	StderrLogFile string
-	ExecLogFile   string
-	Succeeded     bool
+	ID          int64
+	CronID      int64
+	StartTime   time.Time
+	EndTime     sql.NullTime
+	LogFile     string
+	ExecLogFile string
+	Succeeded   bool
 }

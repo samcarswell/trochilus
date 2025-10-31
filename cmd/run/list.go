@@ -24,8 +24,7 @@ var listCmd = &cobra.Command{
 			"Cron Name",
 			"Start Time",
 			"End Time",
-			"Stdout Log File",
-			"Stderr Log File",
+			"Log File",
 			"Exec Log File",
 			"Succeeded",
 		)
@@ -35,8 +34,7 @@ var listCmd = &cobra.Command{
 				run.Cron.Name,
 				run.Run.StartTime,
 				run.Run.EndTime,
-				run.Run.StdoutLogFile,
-				run.Run.StderrLogFile,
+				run.Run.LogFile,
 				run.Run.ExecLogFile,
 				core.FormatSucceeded(run.Run.Succeeded),
 			)

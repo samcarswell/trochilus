@@ -26,7 +26,7 @@ var watchCmd = &cobra.Command{
 		}
 		runRow, err := queries.GetRun(cmd.Context(), runId)
 
-		file, err := os.Open(runRow.Run.StdoutLogFile)
+		file, err := os.Open(runRow.Run.LogFile)
 		if err != nil {
 			return
 		}

@@ -12,8 +12,8 @@ returning id;
 
 -- name: StartRun :one
 insert into runs
-    (cron_id, start_time, stdout_log_file, stderr_log_file, exec_log_file)
-values (?, current_timestamp, ?, ?, ?)
+    (cron_id, start_time, log_file, exec_log_file)
+values (?, current_timestamp, ?, ?)
 returning id;
 
 -- name: EndRun :exec
