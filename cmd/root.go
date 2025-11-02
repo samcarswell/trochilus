@@ -53,6 +53,7 @@ func setupContext(cmd *cobra.Command) {
 			Level: slog.LevelInfo,
 		}))
 		l.Info("Logging to " + logFile.Name())
+		cmd.SetContext(config.ContextWithLogFile(cmd.Context(), logFile.Name()))
 	} else {
 		l = slog.Default()
 	}

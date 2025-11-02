@@ -28,7 +28,7 @@ func NotifyRunSlack(token string, channel string, run data.GetRunRow) (bool, err
 	slackStr := "*" + run.Cron.Name + "*: run " +
 		strconv.FormatInt(run.Run.ID, 10) + tagChannelIfFail(run.Run.Succeeded) +
 		core.FormatSucceeded(run.Run.Succeeded) + "\n" +
-		"Log: `" + run.Run.LogFile + "`\nSystem Log: `" + run.Run.ExecLogFile + "`"
+		"Log: `" + run.Run.LogFile + "`"
 	return NotifySlack(token, channel, slackStr)
 }
 
