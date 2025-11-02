@@ -17,9 +17,11 @@ import (
 	"github.com/spf13/viper"
 )
 
+var cliName = "cron-cowboy"
+
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:   "cron-cowboy",
+	Use:   cliName,
 	Short: "Simple cron monitoring",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		setupContext(cmd)
@@ -36,18 +38,26 @@ func setupContext(cmd *cobra.Command) {
 		panic(err)
 	}
 
-	f, err := os.Create(path.Join(logDir, "cc_"+time.Now().UTC().Format("20060102T150405")+".log"))
-	if err != nil {
-		panic(err)
+	fmt.Println(cmd.CommandPath())
+
+	var l *slog.Logger
+	if cmd.CommandPath() == cliName+" exec" {
+		// If we're executing a cron, we need to log to file
+		f, err := os.Create(path.Join(logDir, "cc_"+time.Now().UTC().Format("20060102T150405")+".log"))
+		if err != nil {
+			panic(err)
+		}
+
+		logFile, _ := os.OpenFile(f.Name(), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		l = slog.New(slog.NewTextHandler(io.MultiWriter(logFile, os.Stdout), &slog.HandlerOptions{
+			Level: slog.LevelInfo,
+		}))
+		l.Info("Logging to " + logFile.Name())
+	} else {
+		l = slog.Default()
 	}
-	logFile, _ := os.OpenFile(f.Name(), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	l := slog.New(slog.NewTextHandler(io.MultiWriter(logFile, os.Stdout), &slog.HandlerOptions{
-		Level: slog.LevelInfo,
-	}))
-	l.Info("Logging to " + logFile.Name())
 
 	cmd.SetContext(config.ContextWithLogger(cmd.Context(), l))
-	cmd.SetContext(config.ContextWithLogFile(cmd.Context(), logFile.Name()))
 	cmd.SetContext(config.ContextWithSchema(cmd.Context(), SqlSchema))
 }
 

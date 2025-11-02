@@ -122,10 +122,6 @@ func LoggerFromContext(ctx context.Context) (*slog.Logger, bool) {
 	return dbConn, ok
 }
 
-func ContextWithLogFile(ctx context.Context, logFile string) context.Context {
-	return context.WithValue(ctx, logFileKey{}, logFile)
-}
-
 func LogFileFromContext(ctx context.Context) (string, bool) {
 	logFile, ok := ctx.Value(logFileKey{}).(string)
 	return logFile, ok
