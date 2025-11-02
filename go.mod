@@ -1,4 +1,4 @@
-module carswellpress.com/cron-cowboy
+module carswellpress.com/trochilus
 
 go 1.24.4
 

@@ -41,7 +41,7 @@ func parseCrontab(crontab string, logger *slog.Logger) ([]CrontabItem, error) {
 }
 
 func parseRow(row string) (*CrontabItem, error) {
-	const cliName = "cron-cowboy"
+	const cliName = "troc"
 	const cronNameOptName = "--cron-name"
 	rowStr := strings.TrimSpace(row)
 	if len(rowStr) == 0 {

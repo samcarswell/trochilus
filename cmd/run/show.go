@@ -7,8 +7,8 @@ import (
 	"log"
 	"time"
 
-	"carswellpress.com/cron-cowboy/config"
-	"carswellpress.com/cron-cowboy/opts"
+	"carswellpress.com/trochilus/config"
+	"carswellpress.com/trochilus/opts"
 	"github.com/spf13/cobra"
 )
 

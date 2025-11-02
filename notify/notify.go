@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"carswellpress.com/cron-cowboy/core"
-	"carswellpress.com/cron-cowboy/data"
+	"carswellpress.com/trochilus/core"
+	"carswellpress.com/trochilus/data"
 )
 
 type slackPost struct {

@@ -4,7 +4,7 @@ Copyright © 2025 Samuel Carswell <samuelrcarswell@gmail.com>
 package cmd
 
 import (
-	"carswellpress.com/cron-cowboy/cmd"
+	"carswellpress.com/trochilus/cmd"
 	"github.com/spf13/cobra"
 )
 

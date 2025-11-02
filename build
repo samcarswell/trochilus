@@ -2,4 +2,4 @@
 
 cd $CC_REPO
 
-go build -o ~/.local/bin/cron-cowboy main.go
+go build -o ~/.local/bin/troc main.go

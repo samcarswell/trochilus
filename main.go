@@ -6,10 +6,10 @@ package main
 import (
 	_ "embed"
 
-	"carswellpress.com/cron-cowboy/cmd"
-	_ "carswellpress.com/cron-cowboy/cmd/cron"
-	_ "carswellpress.com/cron-cowboy/cmd/exec"
-	_ "carswellpress.com/cron-cowboy/cmd/run"
+	"carswellpress.com/trochilus/cmd"
+	_ "carswellpress.com/trochilus/cmd/cron"
+	_ "carswellpress.com/trochilus/cmd/exec"
+	_ "carswellpress.com/trochilus/cmd/run"
 )
 
 //go:embed sql/schema.sql

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"log/slog"
 
-	"carswellpress.com/cron-cowboy/core"
+	"carswellpress.com/trochilus/core"
 	"github.com/spf13/cobra"
 )
 

@@ -3,8 +3,8 @@ package cmd
 import (
 	"context"
 
-	"carswellpress.com/cron-cowboy/config"
-	"carswellpress.com/cron-cowboy/core"
+	"carswellpress.com/trochilus/config"
+	"carswellpress.com/trochilus/core"
 	"github.com/rodaine/table"
 	"github.com/spf13/cobra"
 )

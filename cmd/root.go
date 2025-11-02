@@ -12,12 +12,12 @@ import (
 	"strings"
 	"time"
 
-	"carswellpress.com/cron-cowboy/config"
+	"carswellpress.com/trochilus/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-var cliName = "cron-cowboy"
+var cliName = "trochilus"
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -84,9 +84,9 @@ func init() {
 	replacer := strings.NewReplacer(".", "_")
 	viper.SetEnvKeyReplacer(replacer)
 
-	viper.SetDefault("DatabasePath", "$HOME/.config/cron-cowboy/cc.db")
-	viper.SetDefault("LogDir", "$TMPDIR")
-	viper.AddConfigPath("$HOME/.config/cron-cowboy")
+	viper.SetDefault("database", "$HOME/.config/trochilus/cc.db")
+	viper.SetDefault("logdir", "$TMPDIR")
+	viper.AddConfigPath("$HOME/.config/trochilus")
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AutomaticEnv()

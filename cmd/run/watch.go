@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"carswellpress.com/cron-cowboy/config"
+	"carswellpress.com/trochilus/config"
 	"github.com/spf13/cobra"
 )
 

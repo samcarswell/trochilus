@@ -14,12 +14,12 @@ import (
 	"strconv"
 	"strings"
 
-	"carswellpress.com/cron-cowboy/cmd"
-	"carswellpress.com/cron-cowboy/config"
-	"carswellpress.com/cron-cowboy/core"
-	"carswellpress.com/cron-cowboy/data"
-	"carswellpress.com/cron-cowboy/notify"
-	"carswellpress.com/cron-cowboy/opts"
+	"carswellpress.com/trochilus/cmd"
+	"carswellpress.com/trochilus/config"
+	"carswellpress.com/trochilus/core"
+	"carswellpress.com/trochilus/data"
+	"carswellpress.com/trochilus/notify"
+	"carswellpress.com/trochilus/opts"
 	"github.com/gofrs/flock"
 	"github.com/spf13/cobra"
 )
