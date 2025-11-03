@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"errors"
 	"log"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -36,12 +37,12 @@ var execCmd = &cobra.Command{
 		cronName := opts.GetStringOptOrExit(logger, cmd, "cron-name")
 		skipCrontab := opts.GetBoolOptOrExit(logger, cmd, "skip-crontab")
 		notifyOpt := opts.GetBoolOptOrExit(logger, cmd, "notify")
-		slackToken := config.GetSlackToken()
-		if notifyOpt && slackToken == "" {
+		slackConf := config.GetSlackConfig()
+		queries := config.GetDatabase(cmd.Context())
+		if notifyOpt && slackConf.Token == "" {
 			core.LogErrorAndExit(logger, errors.New("notify is set but slack.token is blank."))
 		}
-		channel := config.GetSlackChannel()
-		if notifyOpt && channel == "" {
+		if notifyOpt && slackConf.Channel == "" {
 			core.LogErrorAndExit(logger, errors.New("notify is set but slack.channel is blank."))
 		}
 
@@ -67,26 +68,6 @@ var execCmd = &cobra.Command{
 				errors.New("Unable to find cron defined with name "+cronName),
 			)
 		}
-
-		// TODO: lock dir should be configurable
-		lockFile := filepath.Join(os.TempDir(), cronName+".lock")
-		f := flock.New(lockFile)
-
-		locked, err := f.TryLock()
-
-		if err != nil {
-			// TODO: this needs to talk to slack. We probably need another
-			// type of run; skipped runs. For now I'll just exit 1
-			log.Fatalf("Unable to create lock for cron. Likely already running: %s", err)
-		}
-		if !locked {
-			log.Fatalf("Unable to create lock for cron. Likely already running")
-		}
-
-		defer f.Unlock()
-		logger.Info("Created cron lock at " + lockFile)
-
-		queries := config.GetDatabase(cmd.Context())
 		cronRow, err := queries.GetCron(context.Background(), cronName)
 		if err != nil {
 			if err == sql.ErrNoRows {
@@ -96,7 +77,6 @@ var execCmd = &cobra.Command{
 			}
 		}
 		if cronRow == (data.GetCronRow{}) {
-			logger.Info("Registering cron")
 			id, err := queries.CreateCron(context.Background(), cronName)
 			if err != nil {
 				core.LogErrorAndExit(logger, err)
@@ -104,7 +84,22 @@ var execCmd = &cobra.Command{
 			cronRow.Cron.Name = cronName
 			cronRow.Cron.ID = id
 		}
-		logger.Info("Registering run")
+
+		// TODO: lock dir should be configurable
+		lockFile := filepath.Join(os.TempDir(), cronName+".lock")
+		f := flock.New(lockFile)
+
+		locked, err := f.TryLock()
+
+		if err != nil || !locked {
+			skipRun(cronRow.Cron.ID, logFile, slackConf, queries, context.Background(), logger)
+		}
+		if !locked {
+			log.Fatalf("Unable to create lock for cron. Likely already running")
+		}
+		// TODO: check if this should be defered before we exit
+		defer f.Unlock()
+		logger.Info("Created cron lock at " + lockFile)
 
 		dir, err := config.GetLogDir()
 		if err != nil {
@@ -153,7 +148,7 @@ var execCmd = &cobra.Command{
 		}
 
 		if notifyOpt {
-			ok, err := notify.NotifyRunSlack(slackToken, channel, completedRun)
+			ok, err := notify.NotifyRunSlack(slackConf, completedRun)
 			if err != nil {
 				log.Fatalf("Unable to notify slack %s", err)
 			}
@@ -173,4 +168,30 @@ func init() {
 	}
 	execCmd.Flags().Bool("skip-crontab", false, "Skips checking of crontab for registered CRON")
 	execCmd.Flags().Bool("notify", false, "Notifies of the exec success")
+}
+
+func skipRun(
+	cronId int64,
+	execLogFile string,
+	slackConf config.SlackConfig,
+	queries *data.Queries,
+	ctx context.Context,
+	logger *slog.Logger,
+) {
+	id, err := queries.SkipRun(ctx, data.SkipRunParams{
+		CronID:      cronId,
+		ExecLogFile: execLogFile,
+	})
+	if err != nil {
+		// TODO: need a standard function here to deal with errors and communicate to slack
+		panic(err)
+	}
+	run, err := queries.GetRun(ctx, id)
+	if err != nil {
+		// TODO: need a standard function here to deal with errors and communicate to slack
+		panic(err)
+	}
+	logger.Warn("Skipping run " + strconv.FormatInt(id, 10) + ". Cron is already running.")
+	notify.NotifyRunSlack(slackConf, run)
+	os.Exit(1)
 }

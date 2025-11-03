@@ -100,12 +100,16 @@ func GetLogFileOrExit(logger *slog.Logger, ctx context.Context) string {
 	return logFile
 }
 
-func GetSlackToken() string {
-	return viper.GetString("slack.token")
+type SlackConfig struct {
+	Token   string
+	Channel string
 }
 
-func GetSlackChannel() string {
-	return viper.GetString("slack.channel")
+func GetSlackConfig() SlackConfig {
+	return SlackConfig{
+		Token:   viper.GetString("slack.token"),
+		Channel: viper.GetString("slack.channel"),
+	}
 }
 
 type loggerKey struct{}

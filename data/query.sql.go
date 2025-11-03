@@ -180,6 +180,25 @@ func (q *Queries) IsRunFinished(ctx context.Context, id int64) (bool, error) {
 	return column_1, err
 }
 
+const skipRun = `-- name: SkipRun :one
+insert into runs
+    (cron_id, start_time, end_time, log_file, exec_log_file, status)
+values (?, current_timestamp, current_timestamp, "", ?, "Skipped")
+returning id
+`
+
+type SkipRunParams struct {
+	CronID      int64
+	ExecLogFile string
+}
+
+func (q *Queries) SkipRun(ctx context.Context, arg SkipRunParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, skipRun, arg.CronID, arg.ExecLogFile)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const startRun = `-- name: StartRun :one
 insert into runs
     (cron_id, start_time, log_file, exec_log_file, status)

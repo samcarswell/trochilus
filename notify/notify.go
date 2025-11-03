@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"carswellpress.com/trochilus/config"
 	"carswellpress.com/trochilus/core"
 	"carswellpress.com/trochilus/data"
 )
@@ -23,24 +24,31 @@ type slackResp struct {
 
 const slackPostMessage = "https://slack.com/api/chat.postMessage"
 
-func NotifyRunSlack(token string, channel string, run data.GetRunRow) (bool, error) {
+func NotifyRunSlack(slackConf config.SlackConfig, run data.GetRunRow) (bool, error) {
 	slackStr := "*" + run.Cron.Name + "*: run " +
 		strconv.FormatInt(run.Run.ID, 10) + tagChannelIfFail(run.Run.Status) +
-		"Status: " + run.Run.Status + "\n" +
-		"Log: `" + run.Run.LogFile + "`"
-	return NotifySlack(token, channel, slackStr)
+		"Status: " + core.FormatStatus(core.RunStatus(run.Run.Status)) + "\n" +
+		printLogIfExists(run.Run.LogFile)
+	return NotifySlack(slackConf, slackStr)
 }
 
-func tagChannelIfFail(succeeded string) string {
-	if succeeded == string(core.RunStatusFailed) {
+func printLogIfExists(logFile string) string {
+	if logFile == "" {
+		return ""
+	}
+	return "Log: `" + logFile + "`"
+}
+
+func tagChannelIfFail(status string) string {
+	if status == string(core.RunStatusFailed) {
 		return " <!channel> "
 	}
 	return " "
 }
 
-func NotifySlack(token string, channel string, text string) (bool, error) {
+func NotifySlack(slackConf config.SlackConfig, text string) (bool, error) {
 	postJson, err := json.Marshal(slackPost{
-		Channel: channel,
+		Channel: slackConf.Channel,
 		Text:    text,
 	})
 	if err != nil {
@@ -48,7 +56,7 @@ func NotifySlack(token string, channel string, text string) (bool, error) {
 	}
 
 	r, err := http.NewRequest("POST", slackPostMessage, bytes.NewBuffer(postJson))
-	r.Header.Add("Authorization", "Bearer "+token)
+	r.Header.Add("Authorization", "Bearer "+slackConf.Token)
 	r.Header.Add("Content-Type", "application/json")
 	r.Header.Add("charset", "utf-8")
 

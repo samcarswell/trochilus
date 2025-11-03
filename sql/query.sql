@@ -21,6 +21,12 @@ update runs
 set end_time = current_timestamp, status = ?
 where id = ?;
 
+-- name: SkipRun :one
+insert into runs
+    (cron_id, start_time, end_time, log_file, exec_log_file, status)
+values (?, current_timestamp, current_timestamp, "", ?, "Skipped")
+returning id;
+
 -- name: GetCrons :many
 select
     sqlc.embed(crons)
