@@ -21,5 +21,5 @@ type Run struct {
 	EndTime     sql.NullTime
 	LogFile     string
 	ExecLogFile string
-	Succeeded   bool
+	Status      string
 }

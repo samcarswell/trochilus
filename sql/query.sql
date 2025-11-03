@@ -12,13 +12,13 @@ returning id;
 
 -- name: StartRun :one
 insert into runs
-    (cron_id, start_time, log_file, exec_log_file)
-values (?, current_timestamp, ?, ?)
+    (cron_id, start_time, log_file, exec_log_file, status)
+values (?, current_timestamp, ?, ?, "Running")
 returning id;
 
 -- name: EndRun :exec
 update runs
-set end_time = current_timestamp, succeeded = ?
+set end_time = current_timestamp, status = ?
 where id = ?;
 
 -- name: GetCrons :many

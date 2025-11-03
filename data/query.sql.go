@@ -25,17 +25,17 @@ func (q *Queries) CreateCron(ctx context.Context, name string) (int64, error) {
 
 const endRun = `-- name: EndRun :exec
 update runs
-set end_time = current_timestamp, succeeded = ?
+set end_time = current_timestamp, status = ?
 where id = ?
 `
 
 type EndRunParams struct {
-	Succeeded bool
-	ID        int64
+	Status string
+	ID     int64
 }
 
 func (q *Queries) EndRun(ctx context.Context, arg EndRunParams) error {
-	_, err := q.db.ExecContext(ctx, endRun, arg.Succeeded, arg.ID)
+	_, err := q.db.ExecContext(ctx, endRun, arg.Status, arg.ID)
 	return err
 }
 
@@ -92,7 +92,7 @@ func (q *Queries) GetCrons(ctx context.Context) ([]GetCronsRow, error) {
 
 const getRun = `-- name: GetRun :one
 select
-    runs.id, runs.cron_id, runs.start_time, runs.end_time, runs.log_file, runs.exec_log_file, runs.succeeded,
+    runs.id, runs.cron_id, runs.start_time, runs.end_time, runs.log_file, runs.exec_log_file, runs.status,
     crons.id, crons.name
 from runs, crons
 where runs.cron_id = crons.id
@@ -114,7 +114,7 @@ func (q *Queries) GetRun(ctx context.Context, id int64) (GetRunRow, error) {
 		&i.Run.EndTime,
 		&i.Run.LogFile,
 		&i.Run.ExecLogFile,
-		&i.Run.Succeeded,
+		&i.Run.Status,
 		&i.Cron.ID,
 		&i.Cron.Name,
 	)
@@ -123,7 +123,7 @@ func (q *Queries) GetRun(ctx context.Context, id int64) (GetRunRow, error) {
 
 const getRuns = `-- name: GetRuns :many
 select
-    runs.id, runs.cron_id, runs.start_time, runs.end_time, runs.log_file, runs.exec_log_file, runs.succeeded,
+    runs.id, runs.cron_id, runs.start_time, runs.end_time, runs.log_file, runs.exec_log_file, runs.status,
     crons.id, crons.name
 from runs, crons
 where runs.cron_id = crons.id
@@ -150,7 +150,7 @@ func (q *Queries) GetRuns(ctx context.Context) ([]GetRunsRow, error) {
 			&i.Run.EndTime,
 			&i.Run.LogFile,
 			&i.Run.ExecLogFile,
-			&i.Run.Succeeded,
+			&i.Run.Status,
 			&i.Cron.ID,
 			&i.Cron.Name,
 		); err != nil {
@@ -182,8 +182,8 @@ func (q *Queries) IsRunFinished(ctx context.Context, id int64) (bool, error) {
 
 const startRun = `-- name: StartRun :one
 insert into runs
-    (cron_id, start_time, log_file, exec_log_file)
-values (?, current_timestamp, ?, ?)
+    (cron_id, start_time, log_file, exec_log_file, status)
+values (?, current_timestamp, ?, ?, "Running")
 returning id
 `
 

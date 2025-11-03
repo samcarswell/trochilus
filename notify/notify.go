@@ -24,20 +24,18 @@ type slackResp struct {
 const slackPostMessage = "https://slack.com/api/chat.postMessage"
 
 func NotifyRunSlack(token string, channel string, run data.GetRunRow) (bool, error) {
-
 	slackStr := "*" + run.Cron.Name + "*: run " +
-		strconv.FormatInt(run.Run.ID, 10) + tagChannelIfFail(run.Run.Succeeded) +
-		core.FormatSucceeded(run.Run.Succeeded) + "\n" +
+		strconv.FormatInt(run.Run.ID, 10) + tagChannelIfFail(run.Run.Status) +
+		"Status: " + run.Run.Status + "\n" +
 		"Log: `" + run.Run.LogFile + "`"
 	return NotifySlack(token, channel, slackStr)
 }
 
-func tagChannelIfFail(succeeded bool) string {
-	if succeeded {
-		return " "
-	} else {
+func tagChannelIfFail(succeeded string) string {
+	if succeeded == string(core.RunStatusFailed) {
 		return " <!channel> "
 	}
+	return " "
 }
 
 func NotifySlack(token string, channel string, text string) (bool, error) {

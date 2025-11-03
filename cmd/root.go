@@ -6,6 +6,7 @@ package cmd
 import (
 	"fmt"
 	"io"
+	"log"
 	"log/slog"
 	"os"
 	"path"
@@ -17,12 +18,12 @@ import (
 	"github.com/spf13/viper"
 )
 
-var cliName = "trochilus"
+var cliName = "troc"
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   cliName,
-	Short: "Simple cron monitoring",
+	Short: "Trochilus - simple cron monitoring",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		setupContext(cmd)
 	},
@@ -80,7 +81,7 @@ func init() {
 	// will be global for your application.
 
 	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cron-cowboy.yaml)")
-	viper.SetEnvPrefix("ZEUS")
+	viper.SetEnvPrefix("TROC")
 	replacer := strings.NewReplacer(".", "_")
 	viper.SetEnvKeyReplacer(replacer)
 
@@ -92,7 +93,7 @@ func init() {
 	viper.AutomaticEnv()
 	err := viper.ReadInConfig() // Find and read the config file
 	if err != nil {             // Handle errors reading the config file
-		fmt.Errorf("fatal error config file: %w", err)
+		log.Fatalf("Unable to read config: %s", err)
 	}
 
 	// Cobra also supports local flags, which will only run

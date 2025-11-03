@@ -19,7 +19,7 @@ type RunShow struct {
 	EndTime       time.Time
 	LogFile       string
 	SystemLogFile string
-	Succeeded     bool
+	Status        string
 }
 
 var showCmd = &cobra.Command{
@@ -41,7 +41,7 @@ var showCmd = &cobra.Command{
 			EndTime:       runRow.Run.EndTime.Time,
 			LogFile:       runRow.Run.LogFile,
 			SystemLogFile: runRow.Run.ExecLogFile,
-			Succeeded:     runRow.Run.Succeeded,
+			Status:        runRow.Run.Status,
 		}
 		jsonData, err := json.MarshalIndent(data, "", "    ")
 		if err != nil {

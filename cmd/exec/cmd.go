@@ -137,15 +137,15 @@ var execCmd = &cobra.Command{
 		runCmd.Stdout = stdoutLog
 		runCmd.Stderr = stdoutLog
 		err = runCmd.Run()
-		succeeded := true
+		status := core.RunStatusRunning
 		if err != nil {
-			succeeded = false
+			status = core.RunStatusFailed
 		}
 		queries.EndRun(context.Background(), data.EndRunParams{
-			Succeeded: succeeded,
-			ID:        runId,
+			Status: string(status),
+			ID:     runId,
 		})
-		logger.Info("Run " + strconv.FormatInt(runId, 10) + " completed. Success: " + strconv.FormatBool(succeeded))
+		logger.Info("Run " + strconv.FormatInt(runId, 10) + " completed: " + string(status))
 
 		completedRun, err := queries.GetRun(cmd.Context(), runId)
 		if err != nil {

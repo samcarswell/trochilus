@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"carswellpress.com/trochilus/config"
-	"carswellpress.com/trochilus/core"
 	"github.com/rodaine/table"
 	"github.com/spf13/cobra"
 )
@@ -26,7 +25,7 @@ var listCmd = &cobra.Command{
 			"End Time",
 			"Log File",
 			"Exec Log File",
-			"Succeeded",
+			"Status",
 		)
 		for _, run := range runRows {
 			tbl.AddRow(
@@ -36,7 +35,7 @@ var listCmd = &cobra.Command{
 				run.Run.EndTime,
 				run.Run.LogFile,
 				run.Run.ExecLogFile,
-				core.FormatSucceeded(run.Run.Succeeded),
+				run.Run.Status,
 			)
 		}
 		tbl.Print()
