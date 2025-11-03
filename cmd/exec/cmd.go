@@ -132,7 +132,7 @@ var execCmd = &cobra.Command{
 		runCmd.Stdout = stdoutLog
 		runCmd.Stderr = stdoutLog
 		err = runCmd.Run()
-		status := core.RunStatusRunning
+		status := core.RunStatusSucceeded
 		if err != nil {
 			status = core.RunStatusFailed
 		}
