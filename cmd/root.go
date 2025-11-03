@@ -5,7 +5,6 @@ package cmd
 
 import (
 	"io"
-	"log"
 	"log/slog"
 	"os"
 	"path"
@@ -18,8 +17,10 @@ import (
 )
 
 var cliName = "troc"
+var configPath = "$HOME/.config/trochilus"
+var configName = "config"
+var configType = "yaml"
 
-// RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   cliName,
 	Short: "Trochilus - simple cron monitoring",
@@ -62,8 +63,6 @@ func setupContext(cmd *cobra.Command) {
 
 var SqlSchema string
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute(sqlSchema string) {
 	SqlSchema = sqlSchema
 	err := RootCmd.Execute()
@@ -73,27 +72,15 @@ func Execute(sqlSchema string) {
 }
 
 func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cron-cowboy.yaml)")
 	viper.SetEnvPrefix("TROC")
 	replacer := strings.NewReplacer(".", "_")
 	viper.SetEnvKeyReplacer(replacer)
 
 	viper.SetDefault("database", "$HOME/.config/trochilus/cc.db")
 	viper.SetDefault("logdir", "$TMPDIR")
-	viper.AddConfigPath("$HOME/.config/trochilus")
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
+	viper.AddConfigPath(configPath)
+	viper.SetConfigName(configName)
+	viper.SetConfigType(configType)
 	viper.AutomaticEnv()
-	err := viper.ReadInConfig() // Find and read the config file
-	if err != nil {             // Handle errors reading the config file
-		log.Fatalf("Unable to read config: %s", err)
-	}
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	RootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	config.CreateAndReadConfig(configPath, configName, configType)
 }

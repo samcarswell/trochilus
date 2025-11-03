@@ -1,5 +1,5 @@
 #!/bin/bash
 
-cd $CC_REPO
+cd $TROC_REPO
 
 go build -o ~/.local/bin/troc main.go

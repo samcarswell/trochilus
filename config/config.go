@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log"
 	"log/slog"
 	"os"
 	"path"
@@ -40,6 +41,35 @@ func expandDir(path string) (string, error) {
 		return ""
 	}
 	return os.Expand(path, mapper), nil
+}
+
+func CreateAndReadConfig(
+	confDir string,
+	confName string,
+	confType string,
+) {
+	expandedConfigDir, err := expandDir(confDir)
+	if err != nil {
+		log.Fatalf("Unable to expand configuration directory %s %s", confDir, err)
+	}
+	err = viper.ReadInConfig()
+	if err != nil {
+		var confNotFoundErr viper.ConfigFileNotFoundError
+		if errors.As(err, &confNotFoundErr) {
+			log.Println("Creating config directory at " + confDir)
+			err := os.MkdirAll(expandedConfigDir, os.ModePerm)
+			if err != nil {
+				log.Fatalf("Unable to create config directory: %s %s", expandedConfigDir, err)
+			}
+			log.Println("Creating initial config file at " + expandedConfigDir + "/" + confName + "." + confType)
+			err = viper.SafeWriteConfig()
+			if err != nil {
+				log.Fatalf("Unable to write initial config: %s", err)
+			}
+		} else {
+			log.Fatalf("Unable to read config: %s", err)
+		}
+	}
 }
 
 func GetLogDir() (string, error) {
