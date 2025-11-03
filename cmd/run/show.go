@@ -32,7 +32,7 @@ var showCmd = &cobra.Command{
 
 		runRow, err := queries.GetRun(context.Background(), runId)
 		if err != nil {
-			panic(err)
+			log.Fatalf("No rows found: %s", err)
 		}
 		data := RunShow{
 			ID:            runRow.Run.ID,
@@ -56,6 +56,6 @@ func init() {
 
 	showCmd.Flags().Int64P("run-id", "r", 0, "Run id")
 	if err := showCmd.MarkFlagRequired("run-id"); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }

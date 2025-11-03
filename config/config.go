@@ -84,30 +84,30 @@ func GetLogDir() (string, error) {
 func GetDatabase(ctx context.Context) *data.Queries {
 	dbPath := viper.GetString(ConfigDatabasePath)
 	if dbPath == "" {
-		panic("database config value is empty")
+		log.Fatalln("database config value is empty")
 	}
 	expandedPath, err := expandDir(dbPath)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Unable to expand database path %s", err)
 	}
 	fileName := path.Base(expandedPath)
 	dir := path.Dir(expandedPath)
 	err = os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
-		panic(err)
+		log.Fatalf("Unable to create database path %s", err)
 	}
 	db, err := sql.Open("sqlite", path.Join(dir, fileName)+"?mode=rw")
 	if err != nil {
-		panic(err)
+		log.Fatalf("Unable to open database %s", err)
 	}
 
 	schema, ok := SchemaFromContext(ctx)
 	if !ok {
-		panic("Could not get schema")
+		log.Fatalf("Could not get schema %s", err)
 	}
 
 	if _, err := db.ExecContext(context.Background(), schema); err != nil {
-		panic(err.Error())
+		log.Fatalf("Unable to update database with schema %s", err)
 	}
 
 	return data.New(db)
@@ -116,8 +116,7 @@ func GetDatabase(ctx context.Context) *data.Queries {
 func GetLoggerOrExit(ctx context.Context) *slog.Logger {
 	logger, ok := LoggerFromContext(ctx)
 	if !ok {
-		// Should this be a panic?
-		panic("Could not get logger from context")
+		log.Fatalln("Could not get logger from context")
 	}
 	return logger
 }
@@ -142,6 +141,10 @@ func GetSlackConfig() SlackConfig {
 	}
 }
 
+func GetHostnameConfig() string {
+	return viper.GetString("hostname")
+}
+
 type loggerKey struct{}
 type logFileKey struct{}
 type schemaKey struct{}
@@ -150,7 +153,6 @@ func ContextWithLogger(ctx context.Context, logger *slog.Logger) context.Context
 	return context.WithValue(ctx, loggerKey{}, logger)
 }
 
-// TODO: the logger dones't always seem to send all logs.
 func LoggerFromContext(ctx context.Context) (*slog.Logger, bool) {
 	dbConn, ok := ctx.Value(loggerKey{}).(*slog.Logger)
 	return dbConn, ok

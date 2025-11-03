@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"log"
 
 	"carswellpress.com/trochilus/config"
 	"github.com/rodaine/table"
@@ -16,7 +17,7 @@ var listCmd = &cobra.Command{
 
 		cronRows, err := queries.GetCrons(context.Background())
 		if err != nil {
-			panic(err)
+			log.Fatalf("Unable to get crons %s", err)
 		}
 		tbl := table.New("ID", "Name")
 		for _, cron := range cronRows {

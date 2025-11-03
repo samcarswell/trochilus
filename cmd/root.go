@@ -5,19 +5,20 @@ package cmd
 
 import (
 	"io"
+	"log"
 	"log/slog"
 	"os"
 	"path"
 	"strings"
-	"time"
 
 	"carswellpress.com/trochilus/config"
+	"carswellpress.com/trochilus/core"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var cliName = "troc"
-var configPath = "$HOME/.config/trochilus"
+var configPath = "$HOME/.config/troc"
 var configName = "config"
 var configType = "yaml"
 
@@ -32,22 +33,20 @@ var RootCmd = &cobra.Command{
 func setupContext(cmd *cobra.Command) {
 	logDir, err := config.GetLogDir()
 	if err != nil {
-		panic(err)
+		log.Fatalln("Unable to get logdir from config %w", err)
 	}
 	err = os.MkdirAll(logDir, os.ModePerm)
 	if err != nil {
-		panic(err)
+		log.Fatalln("Unable to create logdir %w", err)
 	}
 
 	var l *slog.Logger
 	if cmd.CommandPath() == cliName+" exec" {
 		// If we're executing a cron, we need to log to file
-		f, err := os.Create(path.Join(logDir, "cc_"+time.Now().UTC().Format("20060102T150405")+".log"))
+		logFile, err := core.CreateSyslog(logDir)
 		if err != nil {
-			panic(err)
+			log.Fatalln("Unable to create trocsys log %w", err)
 		}
-
-		logFile, _ := os.OpenFile(f.Name(), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 		l = slog.New(slog.NewTextHandler(io.MultiWriter(logFile, os.Stdout), &slog.HandlerOptions{
 			Level: slog.LevelInfo,
 		}))
@@ -76,8 +75,20 @@ func init() {
 	replacer := strings.NewReplacer(".", "_")
 	viper.SetEnvKeyReplacer(replacer)
 
-	viper.SetDefault("database", "$HOME/.config/trochilus/cc.db")
-	viper.SetDefault("logdir", "$TMPDIR")
+	hostname, err := os.Hostname()
+	if err != nil {
+		log.Println("Unable to read hostname. Defaulting to unknown-hostname")
+		hostname = "unknown-hostname"
+	}
+
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatalf("Unable to get user home dir %s", err)
+	}
+	viper.SetDefault("database", path.Join(homedir, ".config", "troc", "troc.db"))
+	viper.SetDefault("logdir", os.TempDir())
+	viper.SetDefault("lockdir", os.TempDir())
+	viper.SetDefault("hostname", hostname)
 	viper.AddConfigPath(configPath)
 	viper.SetConfigName(configName)
 	viper.SetConfigType(configType)

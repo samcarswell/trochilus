@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 
@@ -15,16 +16,16 @@ var addCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		cronName, err := cmd.Flags().GetString("name")
 		if err != nil {
-			panic("Could not get cron name")
+			log.Fatalf("Could not get cron name %s", err)
 		}
 		queries := config.GetDatabase(cmd.Context())
 
 		newCronId, err := queries.CreateCron(cmd.Context(), cronName)
 		if err != nil {
 			if strings.Contains(err.Error(), "UNIQUE constraint failed: crons.name") {
-				panic("Cron with name " + cronName + " already exists.")
+				log.Fatalf("Cron with name "+cronName+" already exists. %s", err)
 			}
-			panic(err)
+			log.Fatalf("Unable to create cron. %s", err)
 		}
 
 		fmt.Println("Cron created with ID " + strconv.FormatInt(newCronId, 10) + " and name " + cronName)
@@ -35,6 +36,6 @@ func init() {
 	CronCmd.AddCommand(addCmd)
 	addCmd.Flags().String("name", "", "Cron Name")
 	if err := addCmd.MarkFlagRequired("name"); err != nil {
-		panic(err)
+		log.Fatalf("Unable to mark name as required %s", err)
 	}
 }

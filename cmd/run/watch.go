@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"time"
 
@@ -13,16 +14,17 @@ import (
 
 var watchCmd = &cobra.Command{
 	Use:   "watch",
-	Short: "Watch run",
+	Short: "Watches a run",
+	Long:  "Watches the logs of a run. If is not running, the log will be printed and the command will immediately exit",
 	Run: func(cmd *cobra.Command, args []string) {
 		logger, ok := config.LoggerFromContext(cmd.Context())
 		if !ok {
-			panic("Unable to get logger")
+			log.Fatalln("Unable to get logger")
 		}
 		queries := config.GetDatabase(cmd.Context())
 		runId, err := cmd.Flags().GetInt64("run-id")
 		if err != nil {
-			panic(err)
+			log.Fatalf("Unable to get run-id option %s", err)
 		}
 		runRow, err := queries.GetRun(cmd.Context(), runId)
 
@@ -70,13 +72,12 @@ var watchCmd = &cobra.Command{
 func init() {
 	watchCmd.Flags().Int64P("run-id", "r", 0, "Run Id")
 	if err := watchCmd.MarkFlagRequired("run-id"); err != nil {
-		panic(err)
+		log.Fatalf("Unable to mark run-id as required %s", err)
 	}
 	RunCmd.AddCommand(watchCmd)
 }
 
 // https://medium.com/@arunprabhu.1/tailing-a-file-in-golang-72944204f22b
-// TODO: wtf is this
 func isTruncated(file *os.File) (bool, error) {
 	// current read position in a file
 	currentPos, err := file.Seek(0, io.SeekCurrent)

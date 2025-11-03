@@ -23,12 +23,17 @@ type slackResp struct {
 
 const slackPostMessage = "https://slack.com/api/chat.postMessage"
 
-func NotifyRunSlack(slackConf config.SlackConfig, run data.GetRunRow) (bool, error) {
-	slackStr := "*" + run.Cron.Name + "*: run " +
-		strconv.FormatInt(run.Run.ID, 10) + tagChannelIfFail(run.Run.Status) +
-		"Status: " + core.FormatStatus(core.RunStatus(run.Run.Status)) + "\n" +
+func NotifyRunSlack(
+	slackConf config.SlackConfig,
+	run data.GetRunRow,
+	hostname string,
+) (bool, error) {
+	slackStr := "*" + run.Cron.Name + "@" + hostname + "*: run " +
+		strconv.FormatInt(run.Run.ID, 10) + " - " +
+		core.FormatStatus(core.RunStatus(run.Run.Status)) +
+		tagChannelIfFail(run.Run.Status) + "\n" +
 		printLogIfExists(run.Run.LogFile)
-	return NotifySlack(slackConf, slackStr)
+	return notifySlack(slackConf, slackStr)
 }
 
 func printLogIfExists(logFile string) string {
@@ -45,7 +50,7 @@ func tagChannelIfFail(status string) string {
 	return " "
 }
 
-func NotifySlack(slackConf config.SlackConfig, text string) (bool, error) {
+func notifySlack(slackConf config.SlackConfig, text string) (bool, error) {
 	postJson, err := json.Marshal(slackPost{
 		Channel: slackConf.Channel,
 		Text:    text,

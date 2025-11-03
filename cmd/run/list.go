@@ -2,8 +2,10 @@ package cmd
 
 import (
 	"context"
+	"log"
 
 	"carswellpress.com/trochilus/config"
+	"carswellpress.com/trochilus/core"
 	"github.com/rodaine/table"
 	"github.com/spf13/cobra"
 )
@@ -16,7 +18,7 @@ var listCmd = &cobra.Command{
 
 		runRows, err := queries.GetRuns(context.Background())
 		if err != nil {
-			panic(err)
+			log.Fatalf("Unable to find any runs %s", err)
 		}
 		tbl := table.New(
 			"ID",
@@ -31,11 +33,11 @@ var listCmd = &cobra.Command{
 			tbl.AddRow(
 				run.Run.ID,
 				run.Cron.Name,
-				run.Run.StartTime,
-				run.Run.EndTime,
+				core.FormatTime(run.Run.StartTime),
+				core.FormatTime(run.Run.EndTime.Time),
 				run.Run.LogFile,
 				run.Run.ExecLogFile,
-				run.Run.Status,
+				core.FormatStatus(core.RunStatus(run.Run.Status)),
 			)
 		}
 		tbl.Print()
