@@ -4,7 +4,6 @@ Copyright © 2025 Samuel Carswell <samuelrcarswell@gmail.com>
 package cmd
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"log/slog"
@@ -38,8 +37,6 @@ func setupContext(cmd *cobra.Command) {
 	if err != nil {
 		panic(err)
 	}
-
-	fmt.Println(cmd.CommandPath())
 
 	var l *slog.Logger
 	if cmd.CommandPath() == cliName+" exec" {

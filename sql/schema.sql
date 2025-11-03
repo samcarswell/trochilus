@@ -1,3 +1,4 @@
+-- TODO: migrate this to migrations before v1
 create table if not exists crons (
     id integer primary key autoincrement,
     name varchar not null, -- TODO: This needs to contain no spaces, quotes etc

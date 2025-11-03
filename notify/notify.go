@@ -3,7 +3,6 @@ package notify
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -73,7 +72,6 @@ func NotifySlack(slackConf config.SlackConfig, text string) (bool, error) {
 		return false, err
 	}
 
-	fmt.Println(slackResp.Error)
 	if res.StatusCode != 200 || !slackResp.Ok {
 		return false, nil
 	}
