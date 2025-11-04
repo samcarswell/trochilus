@@ -12,8 +12,8 @@ import (
 	"path"
 	"strings"
 
-	"carswellpress.com/trochilus/config"
-	"carswellpress.com/trochilus/core"
+	"github.com/samcarswell/trochilus/config"
+	"github.com/samcarswell/trochilus/core"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

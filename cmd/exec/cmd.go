@@ -15,12 +15,12 @@ import (
 	"strconv"
 	"strings"
 
-	"carswellpress.com/trochilus/cmd"
-	"carswellpress.com/trochilus/config"
-	"carswellpress.com/trochilus/core"
-	"carswellpress.com/trochilus/data"
-	"carswellpress.com/trochilus/notify"
-	"carswellpress.com/trochilus/opts"
+	"github.com/samcarswell/trochilus/cmd"
+	"github.com/samcarswell/trochilus/config"
+	"github.com/samcarswell/trochilus/core"
+	"github.com/samcarswell/trochilus/data"
+	"github.com/samcarswell/trochilus/notify"
+	"github.com/samcarswell/trochilus/opts"
 	"github.com/gofrs/flock"
 	"github.com/spf13/cobra"
 )

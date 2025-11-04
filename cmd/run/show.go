@@ -7,8 +7,8 @@ import (
 	"log"
 	"time"
 
-	"carswellpress.com/trochilus/config"
-	"carswellpress.com/trochilus/opts"
+	"github.com/samcarswell/trochilus/config"
+	"github.com/samcarswell/trochilus/opts"
 	"github.com/spf13/cobra"
 )
 

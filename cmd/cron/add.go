@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"carswellpress.com/trochilus/config"
+	"github.com/samcarswell/trochilus/config"
 	"github.com/spf13/cobra"
 )
 

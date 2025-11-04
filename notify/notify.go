@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"carswellpress.com/trochilus/config"
-	"carswellpress.com/trochilus/core"
-	"carswellpress.com/trochilus/data"
+	"github.com/samcarswell/trochilus/config"
+	"github.com/samcarswell/trochilus/core"
+	"github.com/samcarswell/trochilus/data"
 )
 
 type slackPost struct {

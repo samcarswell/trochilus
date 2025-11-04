@@ -1,4 +1,4 @@
-module carswellpress.com/trochilus
+module github.com/samcarswell/trochilus
 
 go 1.24.4
 

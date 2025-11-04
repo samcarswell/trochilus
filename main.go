@@ -7,10 +7,10 @@ import (
 	"embed"
 	_ "embed"
 
-	"carswellpress.com/trochilus/cmd"
-	_ "carswellpress.com/trochilus/cmd/cron"
-	_ "carswellpress.com/trochilus/cmd/exec"
-	_ "carswellpress.com/trochilus/cmd/run"
+	"github.com/samcarswell/trochilus/cmd"
+	_ "github.com/samcarswell/trochilus/cmd/cron"
+	_ "github.com/samcarswell/trochilus/cmd/exec"
+	_ "github.com/samcarswell/trochilus/cmd/run"
 )
 
 //go:embed db/migrations/*.sql

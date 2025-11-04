@@ -4,8 +4,8 @@ import (
 	"context"
 	"log"
 
-	"carswellpress.com/trochilus/config"
-	"carswellpress.com/trochilus/core"
+	"github.com/samcarswell/trochilus/config"
+	"github.com/samcarswell/trochilus/core"
 	"github.com/rodaine/table"
 	"github.com/spf13/cobra"
 )

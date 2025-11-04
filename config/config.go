@@ -12,8 +12,8 @@ import (
 	"path"
 	"strings"
 
-	"carswellpress.com/trochilus/core"
-	"carswellpress.com/trochilus/data"
+	"github.com/samcarswell/trochilus/core"
+	"github.com/samcarswell/trochilus/data"
 	"github.com/spf13/viper"
 	_ "modernc.org/sqlite"
 
