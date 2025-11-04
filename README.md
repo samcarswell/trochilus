@@ -40,6 +40,9 @@ eg. `PATH=$PATH:/usr/local/bin`
 Running `troc` for the first time will create a config file at `~/.config/troc/config.yaml`
 if it does not exist with default values.
 
+Any of the config values can also be specified using env vars:
+eg. `TROC_DATABASE` or `TROC_SLACK_TOKEN`.
+
 
 | Name | Description | Default |
 | - | - | - |
