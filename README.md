@@ -6,6 +6,7 @@ Named after the legendary bird described by Herodotus in [The Histories](https:/
 <p>
 <img width="512" alt="PloverCrocodileSymbiosis" src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/PloverCrocodileSymbiosis.jpg/512px-PloverCrocodileSymbiosis.jpg?20130116123116">
 <p>
+
 ## Features
 
 - Automatically stores stdout/stderr logs of cron jobs.
@@ -44,6 +45,8 @@ if it does not exist with default values.
 | `slack.token` | Token for slack app. | 
 | `slack.channel` | Slack channel to post notifications. | 
 
+Any invocation of `troc` will check for a database located at the `database` config value.
+If it does not exist, it will create it.
 
 ## Running a cron
 
