@@ -3,7 +3,7 @@
 Simple cron (or any script) monitoring
 
 Named after the legendary bird described by Herodotus in [The Histories](https://en.wikipedia.org/wiki/Trochilus_(crocodile_bird)).
-<img width="256" alt="PloverCrocodileSymbiosis" src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/PloverCrocodileSymbiosis.jpg/256px-PloverCrocodileSymbiosis.jpg?20130116123116"
+<img width="256" alt="PloverCrocodileSymbiosis" src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/PloverCrocodileSymbiosis.jpg/256px-PloverCrocodileSymbiosis.jpg?20130116123116">
 
 ## Features
 
