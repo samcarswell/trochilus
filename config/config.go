@@ -3,9 +3,11 @@ package config
 import (
 	"context"
 	"database/sql"
+	"embed"
 	"errors"
 	"log"
 	"log/slog"
+	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -14,6 +16,9 @@ import (
 	"carswellpress.com/trochilus/data"
 	"github.com/spf13/viper"
 	_ "modernc.org/sqlite"
+
+	"github.com/amacneil/dbmate/v2/pkg/dbmate"
+	_ "github.com/amacneil/dbmate/v2/pkg/driver/sqlite"
 )
 
 const ConfigDatabasePath = "database"
@@ -72,16 +77,7 @@ func CreateAndReadConfig(
 	}
 }
 
-func GetLogDir() (string, error) {
-	logDir := viper.GetString(ConfigLogDir)
-	expandedDir, err := expandDir(logDir)
-	if err != nil {
-		return "", err
-	}
-	return expandedDir, nil
-}
-
-func GetDatabase(ctx context.Context) *data.Queries {
+func CreateOrUpdateDatabase(migrations embed.FS, ctx context.Context) *sql.DB {
 	dbPath := viper.GetString(ConfigDatabasePath)
 	if dbPath == "" {
 		log.Fatalln("database config value is empty")
@@ -96,21 +92,38 @@ func GetDatabase(ctx context.Context) *data.Queries {
 	if err != nil {
 		log.Fatalf("Unable to create database path %s", err)
 	}
+	u, _ := url.Parse("sqlite3:///" + expandedPath)
+	dbMateDb := dbmate.New(u)
+	dbMateDb.FS = migrations
+	dbMateDb.AutoDumpSchema = false
+
+	err = dbMateDb.CreateAndMigrate()
+	if err != nil {
+		log.Fatalf("Unable to update database %s", err)
+	}
 	db, err := sql.Open("sqlite", path.Join(dir, fileName)+"?mode=rw")
 	if err != nil {
 		log.Fatalf("Unable to open database %s", err)
 	}
+	return db
+}
 
-	schema, ok := SchemaFromContext(ctx)
+func GetLogDir() (string, error) {
+	logDir := viper.GetString(ConfigLogDir)
+	expandedDir, err := expandDir(logDir)
+	if err != nil {
+		return "", err
+	}
+	return expandedDir, nil
+}
+
+func GetDatabase(ctx context.Context) *data.Queries {
+	migrations, ok := MigrationsFromContext(ctx)
 	if !ok {
-		log.Fatalf("Could not get schema %s", err)
+		log.Fatalf("Could not get migrations")
 	}
 
-	if _, err := db.ExecContext(context.Background(), schema); err != nil {
-		log.Fatalf("Unable to update database with schema %s", err)
-	}
-
-	return data.New(db)
+	return data.New(CreateOrUpdateDatabase(migrations, ctx))
 }
 
 func GetLoggerOrExit(ctx context.Context) *slog.Logger {
@@ -147,7 +160,7 @@ func GetHostnameConfig() string {
 
 type loggerKey struct{}
 type logFileKey struct{}
-type schemaKey struct{}
+type migrationsKey struct{}
 
 func ContextWithLogger(ctx context.Context, logger *slog.Logger) context.Context {
 	return context.WithValue(ctx, loggerKey{}, logger)
@@ -167,11 +180,11 @@ func LogFileFromContext(ctx context.Context) (string, bool) {
 	return logFile, ok
 }
 
-func ContextWithSchema(ctx context.Context, schema string) context.Context {
-	return context.WithValue(ctx, schemaKey{}, schema)
+func ContextWithMigrations(ctx context.Context, migrations embed.FS) context.Context {
+	return context.WithValue(ctx, migrationsKey{}, migrations)
 }
 
-func SchemaFromContext(ctx context.Context) (string, bool) {
-	schema, ok := ctx.Value(schemaKey{}).(string)
-	return schema, ok
+func MigrationsFromContext(ctx context.Context) (embed.FS, bool) {
+	migrations, ok := ctx.Value(migrationsKey{}).(embed.FS)
+	return migrations, ok
 }

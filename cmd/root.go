@@ -4,6 +4,7 @@ Copyright © 2025 Samuel Carswell <samuelrcarswell@gmail.com>
 package cmd
 
 import (
+	"embed"
 	"io"
 	"log"
 	"log/slog"
@@ -57,13 +58,13 @@ func setupContext(cmd *cobra.Command) {
 	}
 
 	cmd.SetContext(config.ContextWithLogger(cmd.Context(), l))
-	cmd.SetContext(config.ContextWithSchema(cmd.Context(), SqlSchema))
+	cmd.SetContext(config.ContextWithMigrations(cmd.Context(), Migrations))
 }
 
-var SqlSchema string
+var Migrations embed.FS
 
-func Execute(sqlSchema string) {
-	SqlSchema = sqlSchema
+func Execute(migrations embed.FS) {
+	Migrations = migrations
 	err := RootCmd.Execute()
 	if err != nil {
 		os.Exit(1)

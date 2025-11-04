@@ -4,6 +4,7 @@ Copyright © 2025 Samuel Carswell <samuelrcarswell@gmail.com>
 package main
 
 import (
+	"embed"
 	_ "embed"
 
 	"carswellpress.com/trochilus/cmd"
@@ -12,9 +13,9 @@ import (
 	_ "carswellpress.com/trochilus/cmd/run"
 )
 
-//go:embed sql/schema.sql
-var sqlSchema string
+//go:embed db/migrations/*.sql
+var migrations embed.FS
 
 func main() {
-	cmd.Execute(sqlSchema)
+	cmd.Execute(migrations)
 }
