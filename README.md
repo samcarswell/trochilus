@@ -98,6 +98,10 @@ daily-sync@example-server: run 84 - ✅: Succeeded
 Log: /tmp/daily-sync.3159256558.log
 ```
 
+## Watching a running cron
+
+Use `troc run watch -r [RUN_ID]` to tail the logs of a running cron until it completes. If the cron has already ran, it will print the logs and immediately exit.
+
 ## Run history
 
 Use `troc run list` to see a list of historical runs.
