@@ -22,10 +22,12 @@ var cliName = "troc"
 var configPath = "$HOME/.config/troc"
 var configName = "config"
 var configType = "yaml"
+var version = "development"
 
 var RootCmd = &cobra.Command{
-	Use:   cliName,
-	Short: "Trochilus - simple cron monitoring",
+	Use:     cliName,
+	Version: version,
+	Short:   "Trochilus - simple cron monitoring",
 	Long: `Trochilus - simple cron monitoring
 	
 https://github.com/samcarswell/trochilus

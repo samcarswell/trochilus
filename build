@@ -1,5 +1,10 @@
 #!/bin/bash
 
-cd $TROC_REPO
+OUTPUT_DIR="${1:-.}"
+OUTPUT_FILE="$OUTPUT_DIR/troc"
+VERSION=$(git describe --tags)
 
-go build -o ~/.local/bin/troc main.go
+echo "Building troc version $VERSION executable at $OUTPUT_FILE"
+
+LDFLAGS="-X 'cmd.root.version=$VERSION'"
+go build -o $OUTPUT_FILE -ldflags="$LDFLAGS" main.go

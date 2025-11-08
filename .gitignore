@@ -1,5 +1,6 @@
 *.db
 script
 trochilus
+troc
 build-server
 c.out
