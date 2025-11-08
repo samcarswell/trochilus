@@ -62,7 +62,7 @@ func CreateAndReadConfig(
 	if err != nil {
 		var confNotFoundErr viper.ConfigFileNotFoundError
 		if errors.As(err, &confNotFoundErr) {
-			log.Println("Creating config directory at " + confDir)
+			log.Println("Creating config directory at " + expandedConfigDir)
 			err := os.MkdirAll(expandedConfigDir, os.ModePerm)
 			if err != nil {
 				log.Fatalf("Unable to create config directory: %s %s", expandedConfigDir, err)
@@ -95,6 +95,7 @@ func CreateOrUpdateDatabase(
 	dbMateDb.FS = migrations
 	dbMateDb.AutoDumpSchema = false
 	dbMateDb.MigrationsDir = []string{migrationsDir}
+	dbMateDb.Log = os.Stderr
 
 	err = dbMateDb.CreateAndMigrate()
 	if err != nil {
