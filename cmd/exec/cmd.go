@@ -15,13 +15,13 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gofrs/flock"
 	"github.com/samcarswell/trochilus/cmd"
 	"github.com/samcarswell/trochilus/config"
 	"github.com/samcarswell/trochilus/core"
 	"github.com/samcarswell/trochilus/data"
 	"github.com/samcarswell/trochilus/notify"
 	"github.com/samcarswell/trochilus/opts"
-	"github.com/gofrs/flock"
 	"github.com/spf13/cobra"
 )
 
@@ -39,13 +39,12 @@ var execCmd = &cobra.Command{
 		logger := config.GetLoggerOrExit(cmd.Context())
 		cronName := opts.GetStringOptOrExit(logger, cmd, nameOpt)
 		notifyOpt := opts.GetBoolOptOrExit(logger, cmd, notifyOpt)
-		slackConf := config.GetSlackConfig()
-		hostname := config.GetHostnameConfig()
+		notifyConf := config.GetNotifyConfig()
 		queries := config.GetDatabase(cmd.Context())
-		if notifyOpt && slackConf.Token == "" {
+		if notifyOpt && notifyConf.Slack.Token == "" {
 			core.LogErrorAndExit(logger, errors.New("notify is set but slack.token is blank."))
 		}
-		if notifyOpt && slackConf.Channel == "" {
+		if notifyOpt && notifyConf.Slack.Channel == "" {
 			core.LogErrorAndExit(logger, errors.New("notify is set but slack.channel is blank."))
 		}
 
@@ -79,7 +78,7 @@ var execCmd = &cobra.Command{
 		locked, err := f.TryLock()
 
 		if err != nil || !locked {
-			skipRun(cronRow.Cron.ID, logFile, slackConf, queries, context.Background(), logger, hostname)
+			skipRun(cronRow.Cron.ID, logFile, notifyConf, queries, context.Background(), logger)
 		}
 		if !locked {
 			log.Fatalf("Unable to create lock for cron. Likely already running")
@@ -136,7 +135,15 @@ var execCmd = &cobra.Command{
 		}
 
 		if notifyOpt {
-			ok, err := notify.NotifyRunSlack(slackConf, completedRun, hostname)
+			ok, err := notify.NotifyRun(
+				notifyConf,
+				notify.RunNotifyInfo{
+					Name:    completedRun.Cron.Name,
+					Id:      completedRun.Run.ID,
+					Status:  core.RunStatus(completedRun.Run.Status),
+					LogFile: completedRun.Run.LogFile,
+				},
+			)
 			if err != nil {
 				log.Fatalf("Unable to notify slack %s", err)
 			}
@@ -160,11 +167,10 @@ func init() {
 func skipRun(
 	cronId int64,
 	execLogFile string,
-	slackConf config.SlackConfig,
+	notifyConf config.NotifyConfig,
 	queries *data.Queries,
 	ctx context.Context,
 	logger *slog.Logger,
-	hostname string,
 ) {
 	id, err := queries.SkipRun(ctx, data.SkipRunParams{
 		CronID:      cronId,
@@ -180,6 +186,14 @@ func skipRun(
 		log.Fatalf("Unable to get updated run %s", err)
 	}
 	logger.Warn("Skipping run " + strconv.FormatInt(id, 10) + ". Cron is already running.")
-	notify.NotifyRunSlack(slackConf, run, hostname)
+	notify.NotifyRun(
+		notifyConf,
+		notify.RunNotifyInfo{
+			Name:    run.Cron.Name,
+			Id:      run.Run.ID,
+			Status:  core.RunStatus(run.Run.Status),
+			LogFile: run.Run.LogFile,
+		},
+	)
 	os.Exit(1)
 }

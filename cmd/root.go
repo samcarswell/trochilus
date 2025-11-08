@@ -26,6 +26,10 @@ var configType = "yaml"
 var RootCmd = &cobra.Command{
 	Use:   cliName,
 	Short: "Trochilus - simple cron monitoring",
+	Long: `Trochilus - simple cron monitoring
+	
+https://github.com/samcarswell/trochilus
+	`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		setupContext(cmd)
 	},
@@ -72,6 +76,7 @@ func Execute(migrations embed.FS) {
 }
 
 func init() {
+	RootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
 	viper.SetEnvPrefix("TROC")
 	replacer := strings.NewReplacer(".", "_")
 	viper.SetEnvKeyReplacer(replacer)
@@ -89,7 +94,7 @@ func init() {
 	viper.SetDefault("database", path.Join(homedir, ".config", "troc", "troc.db"))
 	viper.SetDefault("logdir", os.TempDir())
 	viper.SetDefault("lockdir", os.TempDir())
-	viper.SetDefault("hostname", hostname)
+	viper.SetDefault("notify.hostname", hostname)
 	viper.AddConfigPath(configPath)
 	viper.SetConfigName(configName)
 	viper.SetConfigType(configType)

@@ -8,7 +8,6 @@ import (
 
 	"github.com/samcarswell/trochilus/config"
 	"github.com/samcarswell/trochilus/core"
-	"github.com/samcarswell/trochilus/data"
 )
 
 type slackPost struct {
@@ -21,33 +20,59 @@ type slackResp struct {
 	Error string `json:"error"`
 }
 
-const slackPostMessage = "https://slack.com/api/chat.postMessage"
-
-func NotifyRunSlack(
-	slackConf config.SlackConfig,
-	run data.GetRunRow,
-	hostname string,
-) (bool, error) {
-	slackStr := "*" + run.Cron.Name + "@" + hostname + "*: run " +
-		strconv.FormatInt(run.Run.ID, 10) + " - " +
-		core.FormatStatus(core.RunStatus(run.Run.Status)) +
-		tagChannelIfFail(run.Run.Status) + "\n" +
-		printLogIfExists(run.Run.LogFile)
-	return notifySlack(slackConf, slackStr)
+type RunNotifyInfo struct {
+	Name    string
+	Id      int64
+	Status  core.RunStatus
+	LogFile string
 }
 
-func printLogIfExists(logFile string) string {
+const slackPostMessage = "https://slack.com/api/chat.postMessage"
+
+func NotifyRun(
+	notifyConf config.NotifyConfig,
+	run RunNotifyInfo,
+) (bool, error) {
+	slackStr := getNotifyText(run.Name, run.Id, run.Status, run.LogFile, notifyConf.Hostname)
+	return notifySlack(notifyConf.Slack, slackStr)
+}
+
+// Returns the notification test for a run.
+// This is designed to ignore incorrect inputs; ensuring a notification is sent
+// is critical; if it's missing some information, that's acceptable.
+func getNotifyText(
+	cronName string,
+	runId int64,
+	runStatus core.RunStatus,
+	logFile string,
+	hostname string,
+) string {
+	return "*" + cronName + hostnameIfExists(hostname) + "*: run " +
+		strconv.FormatInt(runId, 10) + " - " +
+		core.FormatStatus(runStatus) +
+		tagChannelIfFail(runStatus) +
+		logFileIfExists(logFile)
+}
+
+func hostnameIfExists(hostname string) string {
+	if hostname == "" {
+		return ""
+	}
+	return "@" + hostname
+}
+
+func logFileIfExists(logFile string) string {
 	if logFile == "" {
 		return ""
 	}
-	return "Log: `" + logFile + "`"
+	return "\nLog: `" + logFile + "`"
 }
 
-func tagChannelIfFail(status string) string {
-	if status == string(core.RunStatusFailed) {
-		return " <!channel> "
+func tagChannelIfFail(status core.RunStatus) string {
+	if status == core.RunStatusFailed {
+		return " <!channel>"
 	}
-	return " "
+	return ""
 }
 
 func notifySlack(slackConf config.SlackConfig, text string) (bool, error) {

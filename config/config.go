@@ -142,20 +142,24 @@ func GetLogFileOrExit(logger *slog.Logger, ctx context.Context) string {
 	return logFile
 }
 
+type NotifyConfig struct {
+	Hostname string
+	Slack    SlackConfig
+}
+
 type SlackConfig struct {
 	Token   string
 	Channel string
 }
 
-func GetSlackConfig() SlackConfig {
-	return SlackConfig{
-		Token:   viper.GetString("slack.token"),
-		Channel: viper.GetString("slack.channel"),
+func GetNotifyConfig() NotifyConfig {
+	return NotifyConfig{
+		Hostname: viper.GetString("notify.hostname"),
+		Slack: SlackConfig{
+			Token:   viper.GetString("notify.slack.token"),
+			Channel: viper.GetString("notify.slack.channel"),
+		},
 	}
-}
-
-func GetHostnameConfig() string {
-	return viper.GetString("hostname")
 }
 
 type loggerKey struct{}
