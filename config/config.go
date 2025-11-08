@@ -108,15 +108,6 @@ func CreateOrUpdateDatabase(
 	return db
 }
 
-func GetLogDir() (string, error) {
-	logDir := viper.GetString(ConfigLogDir)
-	expandedDir, err := expandDir(logDir)
-	if err != nil {
-		return "", err
-	}
-	return expandedDir, nil
-}
-
 func GetDatabase(ctx context.Context) *data.Queries {
 	migrations, ok := MigrationsFromContext(ctx)
 	if !ok {
@@ -165,12 +156,24 @@ type SlackConfig struct {
 	Channel string
 }
 
-func GetNotifyConfig() NotifyConfig {
-	return NotifyConfig{
-		Hostname: viper.GetString("notify.hostname"),
-		Slack: SlackConfig{
-			Token:   viper.GetString("notify.slack.token"),
-			Channel: viper.GetString("notify.slack.channel"),
+type Config struct {
+	Database string
+	LockDir  string
+	LogDir   string
+	Notify   NotifyConfig
+}
+
+func GetConfig() Config {
+	return Config{
+		Database: viper.GetString("database"),
+		LockDir:  viper.GetString("lockdir"),
+		LogDir:   viper.GetString("logdir"),
+		Notify: NotifyConfig{
+			Hostname: viper.GetString("notify.hostname"),
+			Slack: SlackConfig{
+				Token:   viper.GetString("notify.slack.token"),
+				Channel: viper.GetString("notify.slack.channel"),
+			},
 		},
 	}
 }

@@ -39,12 +39,12 @@ var execCmd = &cobra.Command{
 		logger := config.GetLoggerOrExit(cmd.Context())
 		cronName := opts.GetStringOptOrExit(logger, cmd, nameOpt)
 		notifyOpt := opts.GetBoolOptOrExit(logger, cmd, notifyOpt)
-		notifyConf := config.GetNotifyConfig()
+		conf := config.GetConfig()
 		queries := config.GetDatabase(cmd.Context())
-		if notifyOpt && notifyConf.Slack.Token == "" {
+		if notifyOpt && conf.Notify.Slack.Token == "" {
 			core.LogErrorAndExit(logger, errors.New("notify is set but slack.token is blank."))
 		}
-		if notifyOpt && notifyConf.Slack.Channel == "" {
+		if notifyOpt && conf.Notify.Slack.Channel == "" {
 			core.LogErrorAndExit(logger, errors.New("notify is set but slack.channel is blank."))
 		}
 
@@ -53,20 +53,15 @@ var execCmd = &cobra.Command{
 		if len(args) == 0 {
 			core.LogErrorAndExit(logger, errors.New("Must provide args"))
 		}
-		logDir, err := config.GetLogDir()
-		if err != nil {
-			log.Fatalf("Unable to get logdir %s", err)
-		}
 		completedRun := execRun(
 			cmd.Context(),
 			logger,
 			cronName,
 			notifyOpt,
-			notifyConf,
+			conf,
 			queries,
 			logFile,
 			args,
-			logDir,
 		)
 		core.PrintJson(completedRun.Run)
 	},
@@ -87,11 +82,10 @@ func execRun(
 	logger *slog.Logger,
 	cronName string,
 	isNotify bool,
-	notifyConf config.NotifyConfig,
+	conf config.Config,
 	db *data.Queries,
 	logFile string,
 	args []string,
-	logDir string,
 ) data.GetRunRow {
 	cronRow, err := db.GetCron(ctx, cronName)
 	if err != nil {
@@ -113,14 +107,13 @@ func execRun(
 		cronRow.Cron.ID = id
 	}
 
-	// TODO: lock dir should be configurable
-	lockFile := filepath.Join(os.TempDir(), cronName+".lock")
+	lockFile := filepath.Join(conf.LockDir, cronName+".lock")
 	f := flock.New(lockFile)
 
 	locked, err := f.TryLock()
 
 	if err != nil || !locked {
-		return skipRun(cronRow.Cron, logFile, notifyConf, db, context.Background(), logger)
+		return skipRun(cronRow.Cron, logFile, conf.Notify, db, context.Background(), logger)
 	}
 	if !locked {
 		log.Fatalf("Unable to create lock for cron. Likely already running")
@@ -129,7 +122,7 @@ func execRun(
 	defer f.Unlock()
 	logger.Info("Created cron lock at " + lockFile)
 
-	stdout, err := os.CreateTemp(logDir, cronName+".*.log")
+	stdout, err := os.CreateTemp(conf.LogDir, cronName+".*.log")
 	if err != nil {
 		log.Fatalf("Unable to create log file %s", err)
 	}
@@ -150,7 +143,6 @@ func execRun(
 
 	logger.Info("Run created with ID " + strconv.FormatInt(runId, 10))
 
-	// time.Sleep(10 * time.Second)
 	cmdArgs := strings.Split(args[0], " ")
 	runCmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
 	runCmd.Stdout = stdoutLog
@@ -173,8 +165,9 @@ func execRun(
 	}
 
 	if isNotify {
+		logger.Info("Sending notify message")
 		ok, err := notify.NotifyRun(
-			notifyConf,
+			conf.Notify,
 			notify.RunNotifyInfo{
 				Name:             completedRun.Cron.Name,
 				Id:               completedRun.Run.ID,

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -15,16 +16,19 @@ func Test_execRunNonExistentCron(t *testing.T) {
 	db := test.CreateDb(ctx, t)
 	cronName := test.UniqueIdentifer()
 	logFile, logger := test.CreateSysLogFile(t)
+	conf := config.Config{
+		LockDir: t.TempDir(),
+		LogDir:  t.TempDir(),
+	}
 	run := execRun(
 		ctx,
 		logger,
 		cronName,
 		false,
-		config.NotifyConfig{},
+		conf,
 		db,
 		logFile,
 		[]string{"./testdata/script-passes"},
-		t.TempDir(),
 	)
 	dbCron, err := db.GetCron(ctx, cronName)
 	if err != nil {
@@ -45,6 +49,11 @@ func Test_execRunNonExistentCron(t *testing.T) {
 	test.AssertLogHasInfo(t, "Run log created at: "+run.Run.LogFile, run.Run.ExecLogFile)
 	test.AssertLogHasInfo(t, "Run created with ID 1", run.Run.ExecLogFile)
 	test.AssertLogHasInfo(t, "Run 1 completed: Succeeded", run.Run.ExecLogFile)
+	test.AssertLogDoesNotHaveInfo(t, "Sending notify message", run.Run.ExecLogFile)
+	test.AssertFileInDirectory(t, conf.LogDir, run.Run.LogFile)
+	lockRow := test.GetInfoLogLineStartingWith(t, "Created cron lock at ", run.Run.ExecLogFile)
+	lockFile := strings.Split(lockRow.Msg, "Created cron lock at ")[1]
+	test.AssertFileInDirectory(t, conf.LockDir, lockFile)
 
 	test.AssertInt(t, 1, dbCron.Cron.ID)
 	test.AssertBool(t, false, dbCron.Cron.NotifyLogContent)
@@ -62,6 +71,10 @@ func Test_execRunExistentCron(t *testing.T) {
 	db := test.CreateDb(ctx, t)
 	cronName := test.UniqueIdentifer()
 	logFile, logger := test.CreateSysLogFile(t)
+	conf := config.Config{
+		LockDir: t.TempDir(),
+		LogDir:  t.TempDir(),
+	}
 
 	cronId, err := db.CreateCron(ctx, data.CreateCronParams{
 		Name:             cronName,
@@ -76,11 +89,10 @@ func Test_execRunExistentCron(t *testing.T) {
 		logger,
 		cronName,
 		false,
-		config.NotifyConfig{},
+		conf,
 		db,
 		logFile,
 		[]string{"./testdata/script-passes"},
-		t.TempDir(),
 	)
 	dbCron, err := db.GetCron(ctx, cronName)
 	if err != nil {
@@ -102,6 +114,7 @@ func Test_execRunExistentCron(t *testing.T) {
 	test.AssertLogHasInfo(t, "Run log created at: "+run.Run.LogFile, run.Run.ExecLogFile)
 	test.AssertLogHasInfo(t, "Run created with ID 1", run.Run.ExecLogFile)
 	test.AssertLogHasInfo(t, "Run 1 completed: Succeeded", run.Run.ExecLogFile)
+	test.AssertLogDoesNotHaveInfo(t, "Sending notify message", run.Run.ExecLogFile)
 
 	test.AssertInt(t, 1, dbCron.Cron.ID)
 	test.AssertBool(t, false, dbCron.Cron.NotifyLogContent)
@@ -119,16 +132,19 @@ func Test_execRunScriptFails(t *testing.T) {
 	db := test.CreateDb(ctx, t)
 	cronName := test.UniqueIdentifer()
 	logFile, logger := test.CreateSysLogFile(t)
+	conf := config.Config{
+		LockDir: t.TempDir(),
+		LogDir:  t.TempDir(),
+	}
 	run := execRun(
 		ctx,
 		logger,
 		cronName,
 		false,
-		config.NotifyConfig{},
+		conf,
 		db,
 		logFile,
 		[]string{"./testdata/script-fails"},
-		t.TempDir(),
 	)
 	dbRun, err := db.GetRun(ctx, 1)
 	if err != nil {
@@ -139,6 +155,7 @@ func Test_execRunScriptFails(t *testing.T) {
 	test.AssertString(t, "Failed", dbRun.Run.Status)
 	test.AssertLogHasInfo(t, "Run 1 completed: Failed", run.Run.ExecLogFile)
 	test.AssertFileContents(t, "This script will fail\n", run.Run.LogFile)
+	test.AssertLogDoesNotHaveInfo(t, "Sending notify message", run.Run.ExecLogFile)
 }
 
 func Test_execRunStdoutStderr(t *testing.T) {
@@ -146,16 +163,19 @@ func Test_execRunStdoutStderr(t *testing.T) {
 	db := test.CreateDb(ctx, t)
 	cronName := test.UniqueIdentifer()
 	logFile, logger := test.CreateSysLogFile(t)
+	conf := config.Config{
+		LockDir: t.TempDir(),
+		LogDir:  t.TempDir(),
+	}
 	run := execRun(
 		ctx,
 		logger,
 		cronName,
 		false,
-		config.NotifyConfig{},
+		conf,
 		db,
 		logFile,
 		[]string{"./testdata/script-stdout-stderr"},
-		t.TempDir(),
 	)
 	dbRun, err := db.GetRun(ctx, 1)
 	if err != nil {
@@ -166,6 +186,7 @@ func Test_execRunStdoutStderr(t *testing.T) {
 	test.AssertString(t, "Succeeded", dbRun.Run.Status)
 	test.AssertLogHasInfo(t, "Run 1 completed: Succeeded", run.Run.ExecLogFile)
 	test.AssertFileContents(t, "Logging to stdout\nLogging to stderr\n", run.Run.LogFile)
+	test.AssertLogDoesNotHaveInfo(t, "Sending notify message", run.Run.ExecLogFile)
 }
 
 func Test_execRunSkippedRun(t *testing.T) {
@@ -175,17 +196,20 @@ func Test_execRunSkippedRun(t *testing.T) {
 	cronName := test.UniqueIdentifer()
 	logFile1, logger1 := test.CreateSysLogFile(t)
 	logFile2, logger2 := test.CreateSysLogFile(t)
+	conf := config.Config{
+		LockDir: t.TempDir(),
+		LogDir:  t.TempDir(),
+	}
 	go func() {
 		blocked <- execRun(
 			ctx,
 			logger1,
 			cronName,
 			false,
-			config.NotifyConfig{},
+			conf,
 			db,
 			logFile1,
 			[]string{"./testdata/script-sleeps"},
-			t.TempDir(),
 		)
 	}()
 	time.Sleep(5 * time.Millisecond)
@@ -193,12 +217,11 @@ func Test_execRunSkippedRun(t *testing.T) {
 		ctx,
 		logger2,
 		cronName,
-		false,
-		config.NotifyConfig{},
+		true,
+		conf,
 		db,
 		logFile2,
 		[]string{"./testdata/script-passes"},
-		t.TempDir(),
 	)
 	successfulRun := <-blocked
 	runs, err := db.GetRuns(ctx)
@@ -212,4 +235,6 @@ func Test_execRunSkippedRun(t *testing.T) {
 	test.AssertLogHasWarn(t, "Skipping run 2. Cron is already running.", skippedRun.Run.ExecLogFile)
 	test.AssertString(t, "Succeeded", successfulRun.Run.Status)
 	test.AssertLogHasInfo(t, "Run 1 completed: Succeeded", successfulRun.Run.ExecLogFile)
+	test.AssertLogDoesNotHaveInfo(t, "Sending notify message", skippedRun.Run.ExecLogFile)
+	test.AssertLogDoesNotHaveInfo(t, "Sending notify message", successfulRun.Run.ExecLogFile)
 }

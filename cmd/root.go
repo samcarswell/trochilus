@@ -36,11 +36,8 @@ https://github.com/samcarswell/trochilus
 }
 
 func setupContext(cmd *cobra.Command) {
-	logDir, err := config.GetLogDir()
-	if err != nil {
-		log.Fatalln("Unable to get logdir from config %w", err)
-	}
-	err = os.MkdirAll(logDir, os.ModePerm)
+	conf := config.GetConfig()
+	err := os.MkdirAll(conf.LogDir, os.ModePerm)
 	if err != nil {
 		log.Fatalln("Unable to create logdir %w", err)
 	}
@@ -48,7 +45,7 @@ func setupContext(cmd *cobra.Command) {
 	var l *slog.Logger
 	if cmd.CommandPath() == cliName+" exec" {
 		// If we're executing a cron, we need to log to file
-		logFile, err := core.CreateSyslog(logDir)
+		logFile, err := core.CreateSyslog(conf.LogDir)
 		if err != nil {
 			log.Fatalln("Unable to create trocsys log %w", err)
 		}

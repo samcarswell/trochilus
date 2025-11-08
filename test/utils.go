@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -72,6 +73,31 @@ func CreateJsonLogger(logFile *os.File) *slog.Logger {
 	}))
 }
 
+func GetInfoLogLineStartingWith(t *testing.T, text string, path string) logRow {
+	return getLogLineStartingWith(t, "INFO", text, path)
+}
+
+func getLogLineStartingWith(t *testing.T, level string, text string, path string) logRow {
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		var row logRow
+		err := json.Unmarshal([]byte(scanner.Text()), &row)
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+		if row.Level == level && strings.HasPrefix(row.Msg, text) {
+			return row
+		}
+	}
+	t.Fatalf("log line with level %s and message: %s not found", level, text)
+	return logRow{}
+}
+
 func AssertInt[V int | int8 | int16 | int32 | int64](t *testing.T, expected V, actual V) {
 	if actual != expected {
 		t.Fatalf("incorrect result: expected %d, got %d", expected, actual)
@@ -94,6 +120,11 @@ func AssertFileExists(t *testing.T, path string) {
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("file does not exist at %s", path)
 	}
+}
+
+func AssertFileInDirectory(t *testing.T, dir string, path string) {
+	fileDir := filepath.Dir(path)
+	AssertString(t, dir, fileDir)
 }
 
 func AssertFileContents(t *testing.T, expected string, path string) {
