@@ -11,13 +11,18 @@ import (
 
 const createCron = `-- name: CreateCron :one
 insert into crons
-    (name)
-values (?)
+    (name, notify_log_content)
+values (?, ?)
 returning id
 `
 
-func (q *Queries) CreateCron(ctx context.Context, name string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, createCron, name)
+type CreateCronParams struct {
+	Name             string
+	NotifyLogContent bool
+}
+
+func (q *Queries) CreateCron(ctx context.Context, arg CreateCronParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, createCron, arg.Name, arg.NotifyLogContent)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -41,7 +46,7 @@ func (q *Queries) EndRun(ctx context.Context, arg EndRunParams) error {
 
 const getCron = `-- name: GetCron :one
 select
-    crons.id, crons.name
+    crons.id, crons.name, crons.notify_log_content
 from crons
 where crons.name = ?
 `
@@ -53,13 +58,13 @@ type GetCronRow struct {
 func (q *Queries) GetCron(ctx context.Context, name string) (GetCronRow, error) {
 	row := q.db.QueryRowContext(ctx, getCron, name)
 	var i GetCronRow
-	err := row.Scan(&i.Cron.ID, &i.Cron.Name)
+	err := row.Scan(&i.Cron.ID, &i.Cron.Name, &i.Cron.NotifyLogContent)
 	return i, err
 }
 
 const getCrons = `-- name: GetCrons :many
 select
-    crons.id, crons.name
+    crons.id, crons.name, crons.notify_log_content
 from crons
 `
 
@@ -76,7 +81,7 @@ func (q *Queries) GetCrons(ctx context.Context) ([]GetCronsRow, error) {
 	var items []GetCronsRow
 	for rows.Next() {
 		var i GetCronsRow
-		if err := rows.Scan(&i.Cron.ID, &i.Cron.Name); err != nil {
+		if err := rows.Scan(&i.Cron.ID, &i.Cron.Name, &i.Cron.NotifyLogContent); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -93,7 +98,7 @@ func (q *Queries) GetCrons(ctx context.Context) ([]GetCronsRow, error) {
 const getRun = `-- name: GetRun :one
 select
     runs.id, runs.cron_id, runs.start_time, runs.end_time, runs.log_file, runs.exec_log_file, runs.status,
-    crons.id, crons.name
+    crons.id, crons.name, crons.notify_log_content
 from runs, crons
 where runs.cron_id = crons.id
 and runs.id = ?
@@ -117,6 +122,7 @@ func (q *Queries) GetRun(ctx context.Context, id int64) (GetRunRow, error) {
 		&i.Run.Status,
 		&i.Cron.ID,
 		&i.Cron.Name,
+		&i.Cron.NotifyLogContent,
 	)
 	return i, err
 }
@@ -124,7 +130,7 @@ func (q *Queries) GetRun(ctx context.Context, id int64) (GetRunRow, error) {
 const getRuns = `-- name: GetRuns :many
 select
     runs.id, runs.cron_id, runs.start_time, runs.end_time, runs.log_file, runs.exec_log_file, runs.status,
-    crons.id, crons.name
+    crons.id, crons.name, crons.notify_log_content
 from runs, crons
 where runs.cron_id = crons.id
 `
@@ -153,6 +159,7 @@ func (q *Queries) GetRuns(ctx context.Context) ([]GetRunsRow, error) {
 			&i.Run.Status,
 			&i.Cron.ID,
 			&i.Cron.Name,
+			&i.Cron.NotifyLogContent,
 		); err != nil {
 			return nil, err
 		}

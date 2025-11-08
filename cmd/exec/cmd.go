@@ -63,7 +63,10 @@ var execCmd = &cobra.Command{
 			}
 		}
 		if cronRow == (data.GetCronRow{}) {
-			id, err := queries.CreateCron(context.Background(), cronName)
+			id, err := queries.CreateCron(context.Background(), data.CreateCronParams{
+				Name:             cronName,
+				NotifyLogContent: false,
+			})
 			if err != nil {
 				core.LogErrorAndExit(logger, err)
 			}
@@ -78,7 +81,7 @@ var execCmd = &cobra.Command{
 		locked, err := f.TryLock()
 
 		if err != nil || !locked {
-			skipRun(cronRow.Cron.ID, logFile, notifyConf, queries, context.Background(), logger)
+			skipRun(cronRow.Cron, logFile, notifyConf, queries, context.Background(), logger)
 		}
 		if !locked {
 			log.Fatalf("Unable to create lock for cron. Likely already running")
@@ -138,10 +141,11 @@ var execCmd = &cobra.Command{
 			ok, err := notify.NotifyRun(
 				notifyConf,
 				notify.RunNotifyInfo{
-					Name:    completedRun.Cron.Name,
-					Id:      completedRun.Run.ID,
-					Status:  core.RunStatus(completedRun.Run.Status),
-					LogFile: completedRun.Run.LogFile,
+					Name:             completedRun.Cron.Name,
+					Id:               completedRun.Run.ID,
+					Status:           core.RunStatus(completedRun.Run.Status),
+					LogFile:          completedRun.Run.LogFile,
+					NotifyLogContent: cronRow.Cron.NotifyLogContent,
 				},
 			)
 			if err != nil {
@@ -165,7 +169,7 @@ func init() {
 }
 
 func skipRun(
-	cronId int64,
+	cron data.Cron,
 	execLogFile string,
 	notifyConf config.NotifyConfig,
 	queries *data.Queries,
@@ -173,7 +177,7 @@ func skipRun(
 	logger *slog.Logger,
 ) {
 	id, err := queries.SkipRun(ctx, data.SkipRunParams{
-		CronID:      cronId,
+		CronID:      cron.ID,
 		ExecLogFile: execLogFile,
 	})
 	if err != nil {
@@ -189,10 +193,11 @@ func skipRun(
 	notify.NotifyRun(
 		notifyConf,
 		notify.RunNotifyInfo{
-			Name:    run.Cron.Name,
-			Id:      run.Run.ID,
-			Status:  core.RunStatus(run.Run.Status),
-			LogFile: run.Run.LogFile,
+			Name:             run.Cron.Name,
+			Id:               run.Run.ID,
+			Status:           core.RunStatus(run.Run.Status),
+			LogFile:          run.Run.LogFile,
+			NotifyLogContent: cron.NotifyLogContent,
 		},
 	)
 	os.Exit(1)

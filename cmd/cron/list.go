@@ -4,8 +4,8 @@ import (
 	"context"
 	"log"
 
-	"github.com/samcarswell/trochilus/config"
 	"github.com/rodaine/table"
+	"github.com/samcarswell/trochilus/config"
 	"github.com/spf13/cobra"
 )
 
@@ -19,9 +19,9 @@ var listCmd = &cobra.Command{
 		if err != nil {
 			log.Fatalf("Unable to get crons %s", err)
 		}
-		tbl := table.New("ID", "Name")
+		tbl := table.New("ID", "Name", "Notify Log Content")
 		for _, cron := range cronRows {
-			tbl.AddRow(cron.Cron.ID, cron.Cron.Name)
+			tbl.AddRow(cron.Cron.ID, cron.Cron.Name, cron.Cron.NotifyLogContent)
 		}
 		tbl.Print()
 

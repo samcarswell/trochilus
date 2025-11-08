@@ -10,8 +10,9 @@ import (
 )
 
 type Cron struct {
-	ID   int64
-	Name string
+	ID               int64
+	Name             string
+	NotifyLogContent bool
 }
 
 type Run struct {

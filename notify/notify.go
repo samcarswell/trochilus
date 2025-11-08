@@ -3,7 +3,9 @@ package notify
 import (
 	"bytes"
 	"encoding/json"
+	"log"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/samcarswell/trochilus/config"
@@ -21,10 +23,11 @@ type slackResp struct {
 }
 
 type RunNotifyInfo struct {
-	Name    string
-	Id      int64
-	Status  core.RunStatus
-	LogFile string
+	Name             string
+	NotifyLogContent bool
+	Id               int64
+	Status           core.RunStatus
+	LogFile          string
 }
 
 const slackPostMessage = "https://slack.com/api/chat.postMessage"
@@ -33,7 +36,7 @@ func NotifyRun(
 	notifyConf config.NotifyConfig,
 	run RunNotifyInfo,
 ) (bool, error) {
-	slackStr := getNotifyText(run.Name, run.Id, run.Status, run.LogFile, notifyConf.Hostname)
+	slackStr := getNotifyText(run, notifyConf.Hostname)
 	return notifySlack(notifyConf.Slack, slackStr)
 }
 
@@ -41,17 +44,27 @@ func NotifyRun(
 // This is designed to ignore incorrect inputs; ensuring a notification is sent
 // is critical; if it's missing some information, that's acceptable.
 func getNotifyText(
-	cronName string,
-	runId int64,
-	runStatus core.RunStatus,
-	logFile string,
+	run RunNotifyInfo,
 	hostname string,
 ) string {
-	return "*" + cronName + hostnameIfExists(hostname) + "*: run " +
-		strconv.FormatInt(runId, 10) + " - " +
-		core.FormatStatus(runStatus) +
-		tagChannelIfFail(runStatus) +
-		logFileIfExists(logFile)
+	return "*" + run.Name + hostnameIfExists(hostname) + "*: run " +
+		strconv.FormatInt(run.Id, 10) + " - " +
+		core.FormatStatus(run.Status) +
+		tagChannelIfFail(run.Status) +
+		logFileIfExists(run.LogFile) +
+		logOutputIfConfigured(run.NotifyLogContent, run.LogFile)
+}
+
+func logOutputIfConfigured(notifyLogContent bool, logFile string) string {
+	if !notifyLogContent {
+		return ""
+	}
+	logContent, err := os.ReadFile(logFile)
+	if err != nil {
+		log.Printf("Unable to read logfile: %s. Notify message will omit it.", logFile)
+		return ""
+	}
+	return "\nLog Content:\n" + "```\n" + string(logContent) + "```"
 }
 
 func hostnameIfExists(hostname string) string {

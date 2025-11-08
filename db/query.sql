@@ -6,8 +6,8 @@ where crons.name = ?;
 
 -- name: CreateCron :one
 insert into crons
-    (name)
-values (?)
+    (name, notify_log_content)
+values (?, ?)
 returning id;
 
 -- name: StartRun :one
