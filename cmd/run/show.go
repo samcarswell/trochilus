@@ -2,12 +2,11 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"log"
 	"time"
 
 	"github.com/samcarswell/trochilus/config"
+	"github.com/samcarswell/trochilus/core"
 	"github.com/samcarswell/trochilus/opts"
 	"github.com/spf13/cobra"
 )
@@ -43,11 +42,7 @@ var showCmd = &cobra.Command{
 			SystemLogFile: runRow.Run.ExecLogFile,
 			Status:        runRow.Run.Status,
 		}
-		jsonData, err := json.MarshalIndent(data, "", "    ")
-		if err != nil {
-			log.Fatalln(err)
-		}
-		fmt.Println(string(jsonData))
+		core.PrintJson(data)
 	},
 }
 

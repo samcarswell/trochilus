@@ -52,7 +52,7 @@ func setupContext(cmd *cobra.Command) {
 		if err != nil {
 			log.Fatalln("Unable to create trocsys log %w", err)
 		}
-		l = slog.New(slog.NewTextHandler(io.MultiWriter(logFile, os.Stdout), &slog.HandlerOptions{
+		l = slog.New(slog.NewJSONHandler(io.MultiWriter(logFile, os.Stderr), &slog.HandlerOptions{
 			Level: slog.LevelInfo,
 		}))
 		l.Info("Logging to " + logFile.Name())

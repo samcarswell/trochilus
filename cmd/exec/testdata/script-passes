@@ -1,0 +1,4 @@
+#!/bin/bash
+echo "Output line 1"
+echo "Output line 2"
+exit 0

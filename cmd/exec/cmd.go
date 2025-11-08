@@ -53,108 +53,22 @@ var execCmd = &cobra.Command{
 		if len(args) == 0 {
 			core.LogErrorAndExit(logger, errors.New("Must provide args"))
 		}
-
-		cronRow, err := queries.GetCron(context.Background(), cronName)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				logger.Info("Cron not registered")
-			} else {
-				core.LogErrorAndExit(logger, err)
-			}
-		}
-		if cronRow == (data.GetCronRow{}) {
-			id, err := queries.CreateCron(context.Background(), data.CreateCronParams{
-				Name:             cronName,
-				NotifyLogContent: false,
-			})
-			if err != nil {
-				core.LogErrorAndExit(logger, err)
-			}
-			cronRow.Cron.Name = cronName
-			cronRow.Cron.ID = id
-		}
-
-		// TODO: lock dir should be configurable
-		lockFile := filepath.Join(os.TempDir(), cronName+".lock")
-		f := flock.New(lockFile)
-
-		locked, err := f.TryLock()
-
-		if err != nil || !locked {
-			skipRun(cronRow.Cron, logFile, notifyConf, queries, context.Background(), logger)
-		}
-		if !locked {
-			log.Fatalf("Unable to create lock for cron. Likely already running")
-		}
-
-		defer f.Unlock()
-		logger.Info("Created cron lock at " + lockFile)
-
-		dir, err := config.GetLogDir()
+		logDir, err := config.GetLogDir()
 		if err != nil {
 			log.Fatalf("Unable to get logdir %s", err)
 		}
-		stdout, err := os.CreateTemp(dir, cronName+".*.log")
-		if err != nil {
-			log.Fatalf("Unable to create log file %s", err)
-		}
-		stdoutLog, err := os.OpenFile(stdout.Name(), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
-		if err != nil {
-			log.Fatalf("Unable to open log file %s", err)
-		}
-
-		logger.Info("Run log created at: " + stdout.Name())
-		runId, err := queries.StartRun(context.Background(), data.StartRunParams{
-			CronID:      cronRow.Cron.ID,
-			LogFile:     stdout.Name(),
-			ExecLogFile: logFile,
-		})
-		if err != nil {
-			log.Fatalf("Unable to start run %s", err)
-		}
-
-		logger.Info("Run created with ID " + strconv.FormatInt(runId, 10))
-
-		// time.Sleep(10 * time.Second)
-		cmdArgs := strings.Split(args[0], " ")
-		runCmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
-		runCmd.Stdout = stdoutLog
-		runCmd.Stderr = stdoutLog
-		err = runCmd.Run()
-		status := core.RunStatusSucceeded
-		if err != nil {
-			logger.Error("Error occurred during run", "error", err)
-			status = core.RunStatusFailed
-		}
-		queries.EndRun(context.Background(), data.EndRunParams{
-			Status: string(status),
-			ID:     runId,
-		})
-		logger.Info("Run " + strconv.FormatInt(runId, 10) + " completed: " + string(status))
-
-		completedRun, err := queries.GetRun(cmd.Context(), runId)
-		if err != nil {
-			log.Fatalf("Unable to get completed run %s", err)
-		}
-
-		if notifyOpt {
-			ok, err := notify.NotifyRun(
-				notifyConf,
-				notify.RunNotifyInfo{
-					Name:             completedRun.Cron.Name,
-					Id:               completedRun.Run.ID,
-					Status:           core.RunStatus(completedRun.Run.Status),
-					LogFile:          completedRun.Run.LogFile,
-					NotifyLogContent: cronRow.Cron.NotifyLogContent,
-				},
-			)
-			if err != nil {
-				log.Fatalf("Unable to notify slack %s", err)
-			}
-			if !ok {
-				logger.Error("Command was run, but slack was unable to be notified")
-			}
-		}
+		completedRun := execRun(
+			cmd.Context(),
+			logger,
+			cronName,
+			notifyOpt,
+			notifyConf,
+			queries,
+			logFile,
+			args,
+			logDir,
+		)
+		core.PrintJson(completedRun.Run)
 	},
 }
 
@@ -168,6 +82,117 @@ func init() {
 	execCmd.Flags().Bool(notifyOpt, false, "Notifies of the exec success")
 }
 
+func execRun(
+	ctx context.Context,
+	logger *slog.Logger,
+	cronName string,
+	isNotify bool,
+	notifyConf config.NotifyConfig,
+	db *data.Queries,
+	logFile string,
+	args []string,
+	logDir string,
+) data.GetRunRow {
+	cronRow, err := db.GetCron(ctx, cronName)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			logger.Info("Cron not registered. Creating new Cron with name " + cronName)
+		} else {
+			core.LogErrorAndExit(logger, err)
+		}
+	}
+	if cronRow == (data.GetCronRow{}) {
+		id, err := db.CreateCron(context.Background(), data.CreateCronParams{
+			Name:             cronName,
+			NotifyLogContent: false,
+		})
+		if err != nil {
+			core.LogErrorAndExit(logger, err)
+		}
+		cronRow.Cron.Name = cronName
+		cronRow.Cron.ID = id
+	}
+
+	// TODO: lock dir should be configurable
+	lockFile := filepath.Join(os.TempDir(), cronName+".lock")
+	f := flock.New(lockFile)
+
+	locked, err := f.TryLock()
+
+	if err != nil || !locked {
+		return skipRun(cronRow.Cron, logFile, notifyConf, db, context.Background(), logger)
+	}
+	if !locked {
+		log.Fatalf("Unable to create lock for cron. Likely already running")
+	}
+
+	defer f.Unlock()
+	logger.Info("Created cron lock at " + lockFile)
+
+	stdout, err := os.CreateTemp(logDir, cronName+".*.log")
+	if err != nil {
+		log.Fatalf("Unable to create log file %s", err)
+	}
+	stdoutLog, err := os.OpenFile(stdout.Name(), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
+	if err != nil {
+		log.Fatalf("Unable to open log file %s", err)
+	}
+
+	logger.Info("Run log created at: " + stdout.Name())
+	runId, err := db.StartRun(context.Background(), data.StartRunParams{
+		CronID:      cronRow.Cron.ID,
+		LogFile:     stdout.Name(),
+		ExecLogFile: logFile,
+	})
+	if err != nil {
+		log.Fatalf("Unable to start run %s", err)
+	}
+
+	logger.Info("Run created with ID " + strconv.FormatInt(runId, 10))
+
+	// time.Sleep(10 * time.Second)
+	cmdArgs := strings.Split(args[0], " ")
+	runCmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
+	runCmd.Stdout = stdoutLog
+	runCmd.Stderr = stdoutLog
+	err = runCmd.Run()
+	status := core.RunStatusSucceeded
+	if err != nil {
+		logger.Error("Error occurred during run", "error", err)
+		status = core.RunStatusFailed
+	}
+	db.EndRun(context.Background(), data.EndRunParams{
+		Status: string(status),
+		ID:     runId,
+	})
+	logger.Info("Run " + strconv.FormatInt(runId, 10) + " completed: " + string(status))
+
+	completedRun, err := db.GetRun(ctx, runId)
+	if err != nil {
+		log.Fatalf("Unable to get completed run %s", err)
+	}
+
+	if isNotify {
+		ok, err := notify.NotifyRun(
+			notifyConf,
+			notify.RunNotifyInfo{
+				Name:             completedRun.Cron.Name,
+				Id:               completedRun.Run.ID,
+				Status:           core.RunStatus(completedRun.Run.Status),
+				LogFile:          completedRun.Run.LogFile,
+				NotifyLogContent: cronRow.Cron.NotifyLogContent,
+			},
+		)
+		if err != nil {
+			log.Fatalf("Unable to notify slack %s", err)
+		}
+		if !ok {
+			logger.Error("Command was run, but slack was unable to be notified")
+		}
+	}
+	return completedRun
+}
+
 func skipRun(
 	cron data.Cron,
 	execLogFile string,
@@ -175,7 +200,7 @@ func skipRun(
 	queries *data.Queries,
 	ctx context.Context,
 	logger *slog.Logger,
-) {
+) data.GetRunRow {
 	id, err := queries.SkipRun(ctx, data.SkipRunParams{
 		CronID:      cron.ID,
 		ExecLogFile: execLogFile,
@@ -196,9 +221,13 @@ func skipRun(
 			Name:             run.Cron.Name,
 			Id:               run.Run.ID,
 			Status:           core.RunStatus(run.Run.Status),
-			LogFile:          run.Run.LogFile,
+			LogFile:          "",
 			NotifyLogContent: cron.NotifyLogContent,
 		},
 	)
-	os.Exit(1)
+	row, err := queries.GetRun(ctx, run.Run.ID)
+	if err != nil {
+		log.Fatalf("Unable to query row %s", err)
+	}
+	return row
 }

@@ -1,0 +1,4 @@
+#!/bin/bash
+echo "Logging to stdout"
+echo "Logging to stderr" 1>&2
+exit 0

@@ -59,6 +59,9 @@ func logOutputIfConfigured(notifyLogContent bool, logFile string) string {
 	if !notifyLogContent {
 		return ""
 	}
+	if logFile == "" {
+		return ""
+	}
 	logContent, err := os.ReadFile(logFile)
 	if err != nil {
 		log.Printf("Unable to read logfile: %s. Notify message will omit it.", logFile)

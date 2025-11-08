@@ -1,0 +1,5 @@
+#!/bin/bash
+echo "This will sleep for 1 second"
+sleep 1s
+echo "Finished sleeping"
+exit 0

@@ -1,6 +1,9 @@
 package core
 
 import (
+	"encoding/json"
+	"fmt"
+	"log"
 	"log/slog"
 	"math/rand"
 	"os"
@@ -34,4 +37,12 @@ func CreateSyslog(logDir string) (*os.File, error) {
 		return nil, err
 	}
 	return logFile, nil
+}
+
+func PrintJson(data any) {
+	jsonData, err := json.MarshalIndent(data, "", "    ")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	fmt.Println(string(jsonData))
 }

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"embed"
 	"errors"
+	"io/fs"
 	"log"
 	"log/slog"
 	"net/url"
@@ -77,25 +78,23 @@ func CreateAndReadConfig(
 	}
 }
 
-func CreateOrUpdateDatabase(migrations embed.FS, ctx context.Context) *sql.DB {
-	dbPath := viper.GetString(ConfigDatabasePath)
-	if dbPath == "" {
-		log.Fatalln("database config value is empty")
-	}
-	expandedPath, err := expandDir(dbPath)
-	if err != nil {
-		log.Fatalf("Unable to expand database path %s", err)
-	}
-	fileName := path.Base(expandedPath)
-	dir := path.Dir(expandedPath)
-	err = os.MkdirAll(dir, os.ModePerm)
+func CreateOrUpdateDatabase(
+	migrations fs.FS,
+	ctx context.Context,
+	dbPath string,
+	migrationsDir string,
+) *sql.DB {
+	fileName := path.Base(dbPath)
+	dir := path.Dir(dbPath)
+	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
 		log.Fatalf("Unable to create database path %s", err)
 	}
-	u, _ := url.Parse("sqlite3:///" + expandedPath)
+	u, _ := url.Parse("sqlite3:///" + dbPath)
 	dbMateDb := dbmate.New(u)
 	dbMateDb.FS = migrations
 	dbMateDb.AutoDumpSchema = false
+	dbMateDb.MigrationsDir = []string{migrationsDir}
 
 	err = dbMateDb.CreateAndMigrate()
 	if err != nil {
@@ -105,6 +104,7 @@ func CreateOrUpdateDatabase(migrations embed.FS, ctx context.Context) *sql.DB {
 	if err != nil {
 		log.Fatalf("Unable to open database %s", err)
 	}
+	db.Exec("PRAGMA journal_mode=WAL;")
 	return db
 }
 
@@ -122,8 +122,21 @@ func GetDatabase(ctx context.Context) *data.Queries {
 	if !ok {
 		log.Fatalf("Could not get migrations")
 	}
+	dbPath := viper.GetString(ConfigDatabasePath)
+	if dbPath == "" {
+		log.Fatalln("database config value is empty")
+	}
+	expandedPath, err := expandDir(dbPath)
+	if err != nil {
+		log.Fatalf("Unable to expand database path %s", err)
+	}
 
-	return data.New(CreateOrUpdateDatabase(migrations, ctx))
+	return data.New(CreateOrUpdateDatabase(
+		migrations,
+		ctx,
+		expandedPath,
+		"./db/migrations",
+	))
 }
 
 func GetLoggerOrExit(ctx context.Context) *slog.Logger {
