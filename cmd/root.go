@@ -5,13 +5,13 @@ package cmd
 
 import (
 	"embed"
-	"io"
 	"log"
 	"log/slog"
 	"os"
 	"path"
 	"strings"
 
+	slogmulti "github.com/samber/slog-multi"
 	"github.com/samcarswell/trochilus/config"
 	"github.com/samcarswell/trochilus/core"
 	"github.com/spf13/cobra"
@@ -43,7 +43,6 @@ func setupContext(cmd *cobra.Command) {
 	if err != nil {
 		log.Fatalln("Unable to create logdir %w", err)
 	}
-
 	var l *slog.Logger
 	if cmd.CommandPath() == cliName+" exec" {
 		// If we're executing a cron, we need to log to file
@@ -51,9 +50,10 @@ func setupContext(cmd *cobra.Command) {
 		if err != nil {
 			log.Fatalln("Unable to create trocsys log %w", err)
 		}
-		l = slog.New(slog.NewJSONHandler(io.MultiWriter(logFile, os.Stderr), &slog.HandlerOptions{
-			Level: slog.LevelInfo,
-		}))
+		l = slog.New(slogmulti.Fanout(
+			slog.Default().Handler(),
+			slog.NewJSONHandler(logFile, core.GetSlogHandlerOptions()),
+		))
 		l.Info("Logging to " + logFile.Name())
 		cmd.SetContext(config.ContextWithLogFile(cmd.Context(), logFile.Name()))
 	} else {
@@ -75,6 +75,7 @@ func Execute(migrations embed.FS) {
 }
 
 func init() {
+	core.SetDefaultSlogLogger()
 	RootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
 	viper.SetEnvPrefix("TROC")
 	replacer := strings.NewReplacer(".", "_")

@@ -11,6 +11,17 @@ import (
 	"time"
 )
 
+func SetDefaultSlogLogger() {
+	l := slog.New(slog.NewTextHandler(os.Stderr, GetSlogHandlerOptions()))
+	slog.SetDefault(l)
+}
+
+func GetSlogHandlerOptions() *slog.HandlerOptions {
+	return &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}
+}
+
 func LogErrorAndExit(logger *slog.Logger, err error) {
 	logger.Error(err.Error())
 	os.Exit(1)
