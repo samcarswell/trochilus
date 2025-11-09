@@ -56,7 +56,7 @@ func CreateAndReadConfig(
 ) {
 	expandedConfigDir, err := expandDir(confDir)
 	if err != nil {
-		log.Fatalf("Unable to expand configuration directory %s %s", confDir, err)
+		core.LogErrorAndExit(slog.Default(), err, errors.New("unable to expand configuration directory "+confDir))
 	}
 	err = viper.ReadInConfig()
 	if err != nil {
@@ -65,17 +65,26 @@ func CreateAndReadConfig(
 			log.Println("Creating config directory at " + expandedConfigDir)
 			err := os.MkdirAll(expandedConfigDir, os.ModePerm)
 			if err != nil {
-				log.Fatalf("Unable to create config directory: %s %s", expandedConfigDir, err)
+				core.LogErrorAndExit(slog.Default(), err, errors.New("unable to create configuration directory "+expandedConfigDir))
 			}
 			log.Println("Creating initial config file at " + expandedConfigDir + "/" + confName + "." + confType)
 			err = viper.SafeWriteConfig()
 			if err != nil {
-				log.Fatalf("Unable to write initial config: %s", err)
+				core.LogErrorAndExit(slog.Default(), err, errors.New("unable to write initial config"))
 			}
 		} else {
-			log.Fatalf("Unable to read config: %s", err)
+			core.LogErrorAndExit(slog.Default(), err, errors.New("unable to read config"))
 		}
 	}
+}
+
+type dbLogger struct {
+	Logger *slog.Logger
+}
+
+func (dl dbLogger) Write(p []byte) (n int, err error) {
+	dl.Logger.Info(strings.TrimRight(string(p), "\n"))
+	return len(p), nil
 }
 
 func CreateOrUpdateDatabase(
@@ -88,22 +97,25 @@ func CreateOrUpdateDatabase(
 	dir := path.Dir(dbPath)
 	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
-		log.Fatalf("Unable to create database path %s", err)
+		core.LogErrorAndExit(slog.Default(), err, errors.New("unable to create database path "+dir))
 	}
 	u, _ := url.Parse("sqlite3:///" + dbPath)
 	dbMateDb := dbmate.New(u)
 	dbMateDb.FS = migrations
 	dbMateDb.AutoDumpSchema = false
 	dbMateDb.MigrationsDir = []string{migrationsDir}
-	dbMateDb.Log = os.Stderr
+	dblog := dbLogger{
+		Logger: slog.Default(),
+	}
+	dbMateDb.Log = dblog
 
 	err = dbMateDb.CreateAndMigrate()
 	if err != nil {
-		log.Fatalf("Unable to update database %s", err)
+		core.LogErrorAndExit(slog.Default(), err, errors.New("unable to update database"))
 	}
 	db, err := sql.Open("sqlite", path.Join(dir, fileName)+"?mode=rw")
 	if err != nil {
-		log.Fatalf("Unable to open database %s", err)
+		core.LogErrorAndExit(slog.Default(), err, errors.New("unable to open database"))
 	}
 	db.Exec("PRAGMA journal_mode=WAL;")
 	return db
@@ -112,15 +124,15 @@ func CreateOrUpdateDatabase(
 func GetDatabase(ctx context.Context) *data.Queries {
 	migrations, ok := MigrationsFromContext(ctx)
 	if !ok {
-		log.Fatalf("Could not get migrations")
+		core.LogErrorAndExit(slog.Default(), errors.New("could not get migrations"))
 	}
 	dbPath := viper.GetString(ConfigDatabasePath)
 	if dbPath == "" {
-		log.Fatalln("database config value is empty")
+		core.LogErrorAndExit(slog.Default(), errors.New("database config value is empty"))
 	}
 	expandedPath, err := expandDir(dbPath)
 	if err != nil {
-		log.Fatalf("Unable to expand database path %s", err)
+		core.LogErrorAndExit(slog.Default(), err, errors.New("unable to expand database path"))
 	}
 
 	return data.New(CreateOrUpdateDatabase(
@@ -131,18 +143,10 @@ func GetDatabase(ctx context.Context) *data.Queries {
 	))
 }
 
-func GetLoggerOrExit(ctx context.Context) *slog.Logger {
-	logger, ok := LoggerFromContext(ctx)
-	if !ok {
-		log.Fatalln("Could not get logger from context")
-	}
-	return logger
-}
-
 func GetLogFileOrExit(logger *slog.Logger, ctx context.Context) string {
 	logFile, ok := LogFileFromContext(ctx)
 	if !ok {
-		core.LogErrorAndExit(logger, errors.New("Could not get logFile from context"))
+		core.LogErrorAndExit(slog.Default(), errors.New("unable to get logFile from context"))
 	}
 	return logFile
 }

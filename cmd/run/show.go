@@ -2,7 +2,8 @@ package cmd
 
 import (
 	"context"
-	"log"
+	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/samcarswell/trochilus/config"
@@ -25,13 +26,12 @@ var showCmd = &cobra.Command{
 	Use:   "show",
 	Short: "Show details of a run",
 	Run: func(cmd *cobra.Command, args []string) {
-		logger := config.GetLoggerOrExit(cmd.Context())
-		runId := opts.GetInt64OrExit(logger, cmd, "run-id")
+		runId := opts.GetInt64OrExit(cmd, "run-id")
 		queries := config.GetDatabase(cmd.Context())
 
 		runRow, err := queries.GetRun(context.Background(), runId)
 		if err != nil {
-			log.Fatalf("No rows found: %s", err)
+			core.LogErrorAndExit(slog.Default(), errors.New("Run not found"))
 		}
 		data := RunShow{
 			ID:            runRow.Run.ID,
@@ -51,6 +51,6 @@ func init() {
 
 	showCmd.Flags().Int64P("run-id", "r", 0, "Run id")
 	if err := showCmd.MarkFlagRequired("run-id"); err != nil {
-		log.Fatal(err)
+		core.LogErrorAndExit(slog.Default(), err)
 	}
 }

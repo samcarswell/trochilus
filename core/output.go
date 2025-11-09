@@ -2,8 +2,8 @@ package core
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"log"
 	"log/slog"
 	"math/rand"
 	"os"
@@ -11,8 +11,7 @@ import (
 	"time"
 )
 
-func SetDefaultSlogLogger() {
-	l := slog.New(slog.NewTextHandler(os.Stderr, GetSlogHandlerOptions()))
+func SetDefaultSlogLogger(l *slog.Logger) {
 	slog.SetDefault(l)
 }
 
@@ -22,8 +21,12 @@ func GetSlogHandlerOptions() *slog.HandlerOptions {
 	}
 }
 
-func LogErrorAndExit(logger *slog.Logger, err error) {
-	logger.Error(err.Error())
+func GetDefaultTextSlogLogger() *slog.Logger {
+	return slog.New(slog.NewTextHandler(os.Stderr, GetSlogHandlerOptions()))
+}
+
+func LogErrorAndExit(logger *slog.Logger, errs ...error) {
+	logger.Error(errors.Join(errs...).Error())
 	os.Exit(1)
 }
 
@@ -53,7 +56,7 @@ func CreateSyslog(logDir string) (*os.File, error) {
 func PrintJson(data any) {
 	jsonData, err := json.MarshalIndent(data, "", "    ")
 	if err != nil {
-		log.Fatalln(err)
+		LogErrorAndExit(slog.Default(), err)
 	}
 	fmt.Println(string(jsonData))
 }

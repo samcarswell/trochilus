@@ -2,11 +2,11 @@ package cmd
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
+	"github.com/rodaine/table"
 	"github.com/samcarswell/trochilus/config"
 	"github.com/samcarswell/trochilus/core"
-	"github.com/rodaine/table"
 	"github.com/spf13/cobra"
 )
 
@@ -18,7 +18,7 @@ var listCmd = &cobra.Command{
 
 		runRows, err := queries.GetRuns(context.Background())
 		if err != nil {
-			log.Fatalf("Unable to find any runs %s", err)
+			core.LogErrorAndExit(slog.Default(), err)
 		}
 		tbl := table.New(
 			"ID",

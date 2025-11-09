@@ -56,7 +56,10 @@ func CreateSysLogFile(t *testing.T) (string, *slog.Logger) {
 		t.Error(err)
 	}
 	t.Log("Created syslog file at " + logFile.Name())
-	return logFile.Name(), CreateJsonLogger(logFile)
+	l := CreateJsonLogger(logFile)
+	slog.SetDefault(l)
+
+	return logFile.Name(), l
 }
 
 func UniqueIdentifer() string {

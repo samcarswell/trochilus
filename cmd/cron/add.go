@@ -1,13 +1,16 @@
 package cmd
 
 import (
-	"fmt"
+	"errors"
 	"log"
+	"log/slog"
 	"strconv"
 	"strings"
 
 	"github.com/samcarswell/trochilus/config"
+	"github.com/samcarswell/trochilus/core"
 	"github.com/samcarswell/trochilus/data"
+	"github.com/samcarswell/trochilus/opts"
 	"github.com/spf13/cobra"
 )
 
@@ -15,14 +18,9 @@ var addCmd = &cobra.Command{
 	Use:   "add",
 	Short: "Add cron",
 	Run: func(cmd *cobra.Command, args []string) {
-		cronName, err := cmd.Flags().GetString("name")
-		if err != nil {
-			log.Fatalf("Could not get cron name %s", err)
-		}
-		notifyLog, err := cmd.Flags().GetBool("notify-log")
-		if err != nil {
-			log.Fatalf("Could not get notify-log %s", err)
-		}
+		logger := slog.Default()
+		cronName := opts.GetStringOptOrExit(cmd, "name")
+		notifyLog := opts.GetBoolOptOrExit(cmd, "notify-log")
 		queries := config.GetDatabase(cmd.Context())
 
 		newCronId, err := queries.CreateCron(cmd.Context(), data.CreateCronParams{
@@ -31,12 +29,12 @@ var addCmd = &cobra.Command{
 		})
 		if err != nil {
 			if strings.Contains(err.Error(), "UNIQUE constraint failed: crons.name") {
-				log.Fatalf("Cron with name "+cronName+" already exists. %s", err)
+				core.LogErrorAndExit(logger, err, errors.New("cron with name "+cronName+" already exists"))
 			}
-			log.Fatalf("Unable to create cron. %s", err)
+			core.LogErrorAndExit(logger, err, errors.New("unable to create cron"))
 		}
 
-		fmt.Println("Cron created with ID " + strconv.FormatInt(newCronId, 10) + " and name " + cronName)
+		logger.Info("Cron created with ID " + strconv.FormatInt(newCronId, 10) + " and name " + cronName)
 	},
 }
 

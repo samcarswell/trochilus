@@ -4,11 +4,13 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"os"
 	"time"
 
 	"github.com/samcarswell/trochilus/config"
+	"github.com/samcarswell/trochilus/core"
+	"github.com/samcarswell/trochilus/opts"
 	"github.com/spf13/cobra"
 )
 
@@ -17,15 +19,9 @@ var watchCmd = &cobra.Command{
 	Short: "Watches a run",
 	Long:  "Watches the logs of a run. If is not running, the log will be printed and the command will immediately exit",
 	Run: func(cmd *cobra.Command, args []string) {
-		logger, ok := config.LoggerFromContext(cmd.Context())
-		if !ok {
-			log.Fatalln("Unable to get logger")
-		}
+		logger := slog.Default()
 		queries := config.GetDatabase(cmd.Context())
-		runId, err := cmd.Flags().GetInt64("run-id")
-		if err != nil {
-			log.Fatalf("Unable to get run-id option %s", err)
-		}
+		runId := opts.GetInt64OrExit(cmd, "run-id")
 		runRow, err := queries.GetRun(cmd.Context(), runId)
 
 		file, err := os.Open(runRow.Run.LogFile)
@@ -72,7 +68,7 @@ var watchCmd = &cobra.Command{
 func init() {
 	watchCmd.Flags().Int64P("run-id", "r", 0, "Run Id")
 	if err := watchCmd.MarkFlagRequired("run-id"); err != nil {
-		log.Fatalf("Unable to mark run-id as required %s", err)
+		core.LogErrorAndExit(slog.Default(), err)
 	}
 	RunCmd.AddCommand(watchCmd)
 }

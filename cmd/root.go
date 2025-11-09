@@ -5,7 +5,7 @@ package cmd
 
 import (
 	"embed"
-	"log"
+	"errors"
 	"log/slog"
 	"os"
 	"path"
@@ -41,19 +41,20 @@ func setupContext(cmd *cobra.Command) {
 	conf := config.GetConfig()
 	err := os.MkdirAll(conf.LogDir, os.ModePerm)
 	if err != nil {
-		log.Fatalln("Unable to create logdir %w", err)
+		core.LogErrorAndExit(slog.Default(), err, errors.New("unable to create logdir"))
 	}
 	var l *slog.Logger
 	if cmd.CommandPath() == cliName+" exec" {
 		// If we're executing a cron, we need to log to file
 		logFile, err := core.CreateSyslog(conf.LogDir)
 		if err != nil {
-			log.Fatalln("Unable to create trocsys log %w", err)
+			core.LogErrorAndExit(slog.Default(), err, errors.New("unable to create trocsys log"))
 		}
 		l = slog.New(slogmulti.Fanout(
 			slog.Default().Handler(),
 			slog.NewJSONHandler(logFile, core.GetSlogHandlerOptions()),
 		))
+		core.SetDefaultSlogLogger(l)
 		l.Info("Logging to " + logFile.Name())
 		cmd.SetContext(config.ContextWithLogFile(cmd.Context(), logFile.Name()))
 	} else {
@@ -75,7 +76,8 @@ func Execute(migrations embed.FS) {
 }
 
 func init() {
-	core.SetDefaultSlogLogger()
+	core.SetDefaultSlogLogger(core.GetDefaultTextSlogLogger())
+	logger := slog.Default()
 	RootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
 	viper.SetEnvPrefix("TROC")
 	replacer := strings.NewReplacer(".", "_")
@@ -83,13 +85,13 @@ func init() {
 
 	hostname, err := os.Hostname()
 	if err != nil {
-		log.Println("Unable to read hostname. Defaulting to unknown-hostname")
+		logger.Error("Unable to read hostname. Defaulting to unknown-hostname")
 		hostname = "unknown-hostname"
 	}
 
 	homedir, err := os.UserHomeDir()
 	if err != nil {
-		log.Fatalf("Unable to get user home dir %s", err)
+		core.LogErrorAndExit(logger, err, errors.New("unable to get user home dir"))
 	}
 	viper.SetDefault("database", path.Join(homedir, ".config", "troc", "troc.db"))
 	viper.SetDefault("logdir", os.TempDir())

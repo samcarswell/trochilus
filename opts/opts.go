@@ -8,27 +8,27 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func GetStringOptOrExit(logger *slog.Logger, cmd *cobra.Command, name string) string {
+func GetStringOptOrExit(cmd *cobra.Command, name string) string {
 	optVal, err := cmd.Flags().GetString(name)
 	if err != nil {
-		core.LogErrorAndExit(logger, err)
+		core.LogErrorAndExit(slog.Default(), err)
 	}
 	return optVal
 }
-func GetBoolOptOrExit(logger *slog.Logger, cmd *cobra.Command, name string) bool {
+func GetBoolOptOrExit(cmd *cobra.Command, name string) bool {
 	optVal, err := cmd.Flags().GetBool(name)
 	if err != nil {
-		core.LogErrorAndExit(logger, err)
+		core.LogErrorAndExit(slog.Default(), err)
 	}
 	return optVal
 }
-func GetInt64OrExit(logger *slog.Logger, cmd *cobra.Command, name string) int64 {
+func GetInt64OrExit(cmd *cobra.Command, name string) int64 {
 	optVal, err := cmd.Flags().GetInt64(name)
 	if err != nil {
-		core.LogErrorAndExit(logger, err)
+		core.LogErrorAndExit(slog.Default(), err)
 	}
 	if optVal == 0 {
-		core.LogErrorAndExit(logger, errors.New("Option "+name+" must have a value"))
+		core.LogErrorAndExit(slog.Default(), errors.New("option "+name+" must have a value"))
 	}
 	return optVal
 }

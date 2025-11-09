@@ -36,22 +36,22 @@ var execCmd = &cobra.Command{
 	Use:   "exec",
 	Short: "Run a CRON command",
 	Run: func(cmd *cobra.Command, args []string) {
-		logger := config.GetLoggerOrExit(cmd.Context())
-		cronName := opts.GetStringOptOrExit(logger, cmd, nameOpt)
-		notifyOpt := opts.GetBoolOptOrExit(logger, cmd, notifyOpt)
+		logger := slog.Default()
+		cronName := opts.GetStringOptOrExit(cmd, nameOpt)
+		notifyOpt := opts.GetBoolOptOrExit(cmd, notifyOpt)
 		conf := config.GetConfig()
 		queries := config.GetDatabase(cmd.Context())
 		if notifyOpt && conf.Notify.Slack.Token == "" {
-			core.LogErrorAndExit(logger, errors.New("notify is set but slack.token is blank."))
+			core.LogErrorAndExit(logger, errors.New("notify is set but notify.slack.token is blank."))
 		}
 		if notifyOpt && conf.Notify.Slack.Channel == "" {
-			core.LogErrorAndExit(logger, errors.New("notify is set but slack.channel is blank."))
+			core.LogErrorAndExit(logger, errors.New("notify is set but notify.slack.channel is blank."))
 		}
 
 		logFile := config.GetLogFileOrExit(logger, cmd.Context())
 
 		if len(args) == 0 {
-			core.LogErrorAndExit(logger, errors.New("Must provide args"))
+			core.LogErrorAndExit(logger, errors.New("must provide args"))
 		}
 		completedRun := execRun(
 			cmd.Context(),
@@ -72,7 +72,7 @@ func init() {
 
 	execCmd.Flags().String(nameOpt, "", "Name of cron to execute. Will create it if it does not exist")
 	if err := execCmd.MarkFlagRequired(nameOpt); err != nil {
-		log.Fatalf("Unable to mark "+nameOpt+" as required %s", err)
+		core.LogErrorAndExit(slog.Default(), err)
 	}
 	execCmd.Flags().Bool(notifyOpt, false, "Notifies of the exec success")
 }
@@ -90,7 +90,7 @@ func execRun(
 	cronRow, err := db.GetCron(ctx, cronName)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			logger.Info("Cron not registered. Creating new Cron with name " + cronName)
+			log.Print("Cron not registered. Creating new Cron with name " + cronName)
 		} else {
 			core.LogErrorAndExit(logger, err)
 		}
@@ -113,10 +113,17 @@ func execRun(
 	locked, err := f.TryLock()
 
 	if err != nil || !locked {
-		return skipRun(cronRow.Cron, logFile, conf.Notify, db, context.Background(), logger)
+		return skipRun(
+			cronRow.Cron,
+			logFile,
+			conf.Notify,
+			db,
+			context.Background(),
+			logger,
+		)
 	}
 	if !locked {
-		log.Fatalf("Unable to create lock for cron. Likely already running")
+		core.LogErrorAndExit(logger, errors.New("Unable to create lock for cron. Likely already running"))
 	}
 
 	defer f.Unlock()
@@ -124,11 +131,11 @@ func execRun(
 
 	stdout, err := os.CreateTemp(conf.LogDir, cronName+".*.log")
 	if err != nil {
-		log.Fatalf("Unable to create log file %s", err)
+		core.LogErrorAndExit(logger, err, errors.New("unable to create log file"))
 	}
 	stdoutLog, err := os.OpenFile(stdout.Name(), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
 	if err != nil {
-		log.Fatalf("Unable to open log file %s", err)
+		core.LogErrorAndExit(logger, err, errors.New("unable to open log file"))
 	}
 
 	logger.Info("Run log created at: " + stdout.Name())
@@ -138,7 +145,7 @@ func execRun(
 		ExecLogFile: logFile,
 	})
 	if err != nil {
-		log.Fatalf("Unable to start run %s", err)
+		core.LogErrorAndExit(logger, err, errors.New("unable to start run"))
 	}
 
 	logger.Info("Run created with ID " + strconv.FormatInt(runId, 10))
@@ -161,7 +168,7 @@ func execRun(
 
 	completedRun, err := db.GetRun(ctx, runId)
 	if err != nil {
-		log.Fatalf("Unable to get completed run %s", err)
+		core.LogErrorAndExit(logger, err, errors.New("unable to get completed run"))
 	}
 
 	if isNotify {
@@ -177,10 +184,10 @@ func execRun(
 			},
 		)
 		if err != nil {
-			log.Fatalf("Unable to notify slack %s", err)
+			core.LogErrorAndExit(logger, err, errors.New("unable to notify"))
 		}
 		if !ok {
-			logger.Error("Command was run, but slack was unable to be notified")
+			logger.Error("command was run, but notification was unable to be sent")
 		}
 	}
 	return completedRun
@@ -200,12 +207,12 @@ func skipRun(
 	})
 	if err != nil {
 		// TODO: need a standard function here to deal with errors and communicate to slack
-		log.Fatalf("Unable to skip run %s", err)
+		core.LogErrorAndExit(logger, err, errors.New("unable to skip run"))
 	}
 	run, err := queries.GetRun(ctx, id)
 	if err != nil {
 		// TODO: need a standard function here to deal with errors and communicate to slack
-		log.Fatalf("Unable to get updated run %s", err)
+		core.LogErrorAndExit(logger, err, errors.New("unable to get updated run"))
 	}
 	logger.Warn("Skipping run " + strconv.FormatInt(id, 10) + ". Cron is already running.")
 	notify.NotifyRun(
@@ -220,7 +227,7 @@ func skipRun(
 	)
 	row, err := queries.GetRun(ctx, run.Run.ID)
 	if err != nil {
-		log.Fatalf("Unable to query row %s", err)
+		core.LogErrorAndExit(logger, err, errors.New("unable to get updated run"))
 	}
 	return row
 }

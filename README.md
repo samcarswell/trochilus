@@ -20,20 +20,75 @@ Named after the legendary bird described by Herodotus in [The Histories](https:/
 - Query cron job runs using the `troc` cli.
 - Flock functionality; ensures that only one instance of a cron job is ran at a time; keeps a log of skipped runs.
 - Posts run results to slack; tags `@channel` on failure.
+- Single executable; no daemon.
+
+## Build
+
+Checkout the relevant release tag. eg. `0.1.0`; you can build on any commit but there might be issues.
+
+```bash
+git checkout 0.1.0
+./build
+```
+
+Will create a `troc` binary in root directory of the repo. You can output elsewhere if you like: `./build ~/.local/bin`.
 
 ## Installation
 
-Build the `troc` CLI:
+Ensure the `troc` binary is available in your path. eg. `PATH=$PATH:~/.local/bin` assuming `troc` is in `~/.local/bin`.
 
-`go build -o troc`
+Executing `troc` for the first time will setup your config and database with the default settings:
 
-Move the `troc` CLI to somewhere in your `$PATH`:
+```log
+fsh ❯ troc exec --name "test" "echo 'Testing...'"
+time=2025-11-09T14:02:31.182+11:00 level=INFO msg="Creating config directory at /home/srcarswell/.config/troc"
+time=2025-11-09T14:02:31.182+11:00 level=INFO msg="Creating initial config file at /home/srcarswell/.config/troc/config.yaml"
+time=2025-11-09T14:02:31.184+11:00 level=INFO msg="Logging to /tmp/trocsys_wfnzz_20251109T030231.log"
+time=2025-11-09T14:02:31.184+11:00 level=INFO msg="Creating: /home/srcarswell/.config/troc/troc.db"
+time=2025-11-09T14:02:31.187+11:00 level=INFO msg="Applying: 20251104051400_initial.sql"
+time=2025-11-09T14:02:31.189+11:00 level=INFO msg="Applied: 20251104051400_initial.sql in 1.886512ms"
+time=2025-11-09T14:02:31.189+11:00 level=INFO msg="Applying: 20251108020521_message_cron.sql"
+time=2025-11-09T14:02:31.191+11:00 level=INFO msg="Applied: 20251108020521_message_cron.sql in 2.176757ms"
+time=2025-11-09T14:02:31.195+11:00 level=INFO msg="Cron not registered. Creating new Cron with name test"
+time=2025-11-09T14:02:31.196+11:00 level=INFO msg="Created cron lock at /tmp/test.lock"
+time=2025-11-09T14:02:31.196+11:00 level=INFO msg="Run log created at: /tmp/test.4227158531.log"
+time=2025-11-09T14:02:31.197+11:00 level=INFO msg="Run created with ID 1"
+time=2025-11-09T14:02:31.199+11:00 level=INFO msg="Run 1 completed: Succeeded"
+{
+    "ID": 1,
+    "CronID": 1,
+    "StartTime": "2025-11-09T03:02:31Z",
+    "EndTime": {
+        "Time": "2025-11-09T03:02:31Z",
+        "Valid": true
+    },
+    "LogFile": "/tmp/test.4227158531.log",
+    "ExecLogFile": "/tmp/trocsys_wfnzz_20251109T030231.log",
+    "Status": "Succeeded"
+}
+```
 
-eg. `mv troc /usr/local/bin`
+Subsequent runs won't do this:
 
-Ensure this path is available in your crontab:
+```log
+time=2025-11-09T14:03:18.256+11:00 level=INFO msg="Logging to /tmp/trocsys_yncwi_20251109T030318.log"
+time=2025-11-09T14:03:18.261+11:00 level=INFO msg="Created cron lock at /tmp/test.lock"
+time=2025-11-09T14:03:18.261+11:00 level=INFO msg="Run log created at: /tmp/test.2330262208.log"
+time=2025-11-09T14:03:18.262+11:00 level=INFO msg="Run created with ID 2"
+time=2025-11-09T14:03:18.264+11:00 level=INFO msg="Run 2 completed: Succeeded"
+{
+    "ID": 2,
+...
+```
 
-eg. `PATH=$PATH:/usr/local/bin`
+Updating `troc` versions may also need to apply migrations to your database,
+in which case these will be logged similarly to the first run. eg.
+
+```log
+...
+time=2025-11-09T14:03:18.240+11:00 level=INFO msg="Applying: 20251108020521_a_new_migration.sql"
+...
+```
 
 ### Config
 
@@ -41,17 +96,17 @@ Running `troc` for the first time will create a config file at `~/.config/troc/c
 if it does not exist with default values.
 
 Any of the config values can also be specified using env vars:
-eg. `TROC_DATABASE` or `TROC_SLACK_TOKEN`.
+eg. `TROC_DATABASE` or `TROC_NOTIFY_SLACK_TOKEN`.
 
 
 | Name | Description | Default |
 | - | - | - |
 | `database` | Path to the sqlite database. | `~/.config/troc/troc.db`
-| `hostname` | Name of server when pushing notifications. eg. `cron-name@hostname` | Output of `hostname`
 | `lockdir` | Directory of cron lock files. | `$TMPDIR` if not empty, otherwise `/tmp`
 | `logdir` | Directory of cron log files. | `$TMPDIR` if not empty, otherwise `/tmp`
-| `slack.token` | Token for slack app. | 
-| `slack.channel` | Slack channel to post notifications. | 
+| `notify.hostname` | Name of server when pushing notifications. eg. `cron-name@hostname` | Output of `hostname`
+| `notify.slack.token` | Token for slack app. | 
+| `notify.slack.channel` | Slack channel to post notifications. | 
 
 Any invocation of `troc` will check for a database located at the `database` config value.
 If it does not exist, it will create it.
@@ -90,7 +145,7 @@ Output:
 }
 ```
 
-If you have the `slack.*` config values, you can append `--notify` to the `troc exec`
+If you have the `notify.slack.*` config values, you can append `--notify` to the `troc exec`
 command to send a notification in slack:
 
 ```

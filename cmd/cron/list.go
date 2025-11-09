@@ -2,10 +2,12 @@ package cmd
 
 import (
 	"context"
-	"log"
+	"errors"
+	"log/slog"
 
 	"github.com/rodaine/table"
 	"github.com/samcarswell/trochilus/config"
+	"github.com/samcarswell/trochilus/core"
 	"github.com/spf13/cobra"
 )
 
@@ -17,7 +19,7 @@ var listCmd = &cobra.Command{
 
 		cronRows, err := queries.GetCrons(context.Background())
 		if err != nil {
-			log.Fatalf("Unable to get crons %s", err)
+			core.LogErrorAndExit(slog.Default(), err, errors.New("unable to get crons"))
 		}
 		tbl := table.New("ID", "Name", "Notify Log Content")
 		for _, cron := range cronRows {
