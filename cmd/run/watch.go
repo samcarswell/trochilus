@@ -2,10 +2,13 @@ package cmd
 
 import (
 	"bufio"
+	"database/sql"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/samcarswell/trochilus/config"
@@ -23,6 +26,13 @@ var watchCmd = &cobra.Command{
 		queries := config.GetDatabase(cmd.Context())
 		runId := opts.GetInt64OrExit(cmd, "run-id")
 		runRow, err := queries.GetRun(cmd.Context(), runId)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				core.LogErrorAndExit(logger, errors.New("run with id "+strconv.FormatInt(runId, 10)+" not found"))
+			} else {
+				core.LogErrorAndExit(logger, err)
+			}
+		}
 
 		file, err := os.Open(runRow.Run.LogFile)
 		if err != nil {
