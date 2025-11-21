@@ -1,22 +1,37 @@
 package cmd
 
 import (
-	"context"
+	"database/sql"
+	"errors"
 	"log/slog"
 
 	"github.com/rodaine/table"
 	"github.com/samcarswell/trochilus/config"
 	"github.com/samcarswell/trochilus/core"
+	"github.com/samcarswell/trochilus/opts"
 	"github.com/spf13/cobra"
 )
+
+var nameOpt = "name"
 
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "Lists runs",
 	Run: func(cmd *cobra.Command, args []string) {
+		logger := slog.Default()
+		cronName := opts.GetStringOptOrExit(cmd, nameOpt)
 		queries := config.GetDatabase(cmd.Context())
 
-		runRows, err := queries.GetRuns(context.Background())
+		_, err := queries.GetCron(cmd.Context(), cronName)
+		if err != nil {
+			if err == sql.ErrNoRows {
+				core.LogErrorAndExit(logger, errors.New("cron with name '"+cronName+"' not found"))
+			} else {
+				core.LogErrorAndExit(logger, err)
+			}
+		}
+
+		runRows, err := queries.GetRuns(cmd.Context(), cronName)
 		if err != nil {
 			core.LogErrorAndExit(slog.Default(), err)
 		}
@@ -47,4 +62,6 @@ var listCmd = &cobra.Command{
 
 func init() {
 	RunCmd.AddCommand(listCmd)
+
+	listCmd.Flags().String(nameOpt, "", "Name of cron to filter on")
 }

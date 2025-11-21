@@ -133,6 +133,7 @@ select
     crons.id, crons.name, crons.notify_log_content
 from runs, crons
 where runs.cron_id = crons.id
+and (?1 = '' or crons.name = ?1)
 `
 
 type GetRunsRow struct {
@@ -140,8 +141,8 @@ type GetRunsRow struct {
 	Cron Cron
 }
 
-func (q *Queries) GetRuns(ctx context.Context) ([]GetRunsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getRuns)
+func (q *Queries) GetRuns(ctx context.Context, dollar_1 interface{}) ([]GetRunsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRuns, dollar_1)
 	if err != nil {
 		return nil, err
 	}

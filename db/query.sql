@@ -37,7 +37,8 @@ select
     sqlc.embed(runs),
     sqlc.embed(crons)
 from runs, crons
-where runs.cron_id = crons.id;
+where runs.cron_id = crons.id
+and (?1 = '' or crons.name = ?1);
 
 -- name: GetRun :one
 select
