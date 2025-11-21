@@ -238,3 +238,33 @@ func Test_execRunSkippedRun(t *testing.T) {
 	test.AssertLogDoesNotHaveInfo(t, "Sending notify message", skippedRun.Run.ExecLogFile)
 	test.AssertLogDoesNotHaveInfo(t, "Sending notify message", successfulRun.Run.ExecLogFile)
 }
+
+func Test_execRunComplexCommand(t *testing.T) {
+	ctx := context.Background()
+	db := test.CreateDb(ctx, t)
+	cronName := test.UniqueIdentifer()
+	logFile, logger := test.CreateSysLogFile(t)
+	conf := config.Config{
+		LockDir: t.TempDir(),
+		LogDir:  t.TempDir(),
+	}
+	run := execRun(
+		ctx,
+		logger,
+		cronName,
+		false,
+		conf,
+		db,
+		logFile,
+		[]string{"echo \"Testing again...\" && echo \"and again...\" | awk '{ print toupper($0) }'"},
+	)
+	dbRun, err := db.GetRun(ctx, 1)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	test.AssertString(t, "Succeeded", run.Run.Status)
+	test.AssertString(t, "Succeeded", dbRun.Run.Status)
+	test.AssertLogHasInfo(t, "Run 1 completed: Succeeded", run.Run.ExecLogFile)
+	test.AssertFileContents(t, "Testing again...\nAND AGAIN...\n", run.Run.LogFile)
+}

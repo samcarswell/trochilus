@@ -13,7 +13,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/gofrs/flock"
 	"github.com/samcarswell/trochilus/cmd"
@@ -35,6 +34,7 @@ var notifyOpt = "notify"
 var execCmd = &cobra.Command{
 	Use:   "exec",
 	Short: "Run a CRON command",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		logger := slog.Default()
 		cronName := opts.GetStringOptOrExit(cmd, nameOpt)
@@ -123,7 +123,7 @@ func execRun(
 		)
 	}
 	if !locked {
-		core.LogErrorAndExit(logger, errors.New("Unable to create lock for cron. Likely already running"))
+		core.LogErrorAndExit(logger, errors.New("unable to create lock for cron. Likely already running"))
 	}
 
 	defer f.Unlock()
@@ -150,8 +150,9 @@ func execRun(
 
 	logger.Info("Run created with ID " + strconv.FormatInt(runId, 10))
 
-	cmdArgs := strings.Split(args[0], " ")
-	runCmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
+	cmdArgs := []string{"-c"}
+	cmdArgs = append(cmdArgs, args[0])
+	runCmd := exec.Command("/bin/sh", cmdArgs...)
 	runCmd.Stdout = stdoutLog
 	runCmd.Stderr = stdoutLog
 	err = runCmd.Run()
