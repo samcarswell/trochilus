@@ -30,10 +30,9 @@ Log: ` + "`/file/path`"},
 Log: ` + "`/file/path`"},
 		{"notify-log-content", "test-3", 34, core.RunStatusSucceeded, "testdata/example.log", true, "",
 			`*test-3*: run 34 - ✅ Succeeded
-Log: ` + "`testdata/example.log`" + "\nLog Content:\n" + "```" + "\nLine one of log\nLine two of log\n```"},
-		{"notify-log-content-file-does-not-exist", "test-3", 34, core.RunStatusSucceeded, "testdata/notreal.log", true, "",
-			`*test-3*: run 34 - ✅ Succeeded
-Log: ` + "`testdata/notreal.log`"},
+Log:
+` + "```" + "\nLine one of log\nLine two of log\n```"},
+		{"notify-log-content-file-does-not-exist", "test-3", 34, core.RunStatusSucceeded, "testdata/notreal.log", true, "", "*test-3*: run 34 - ✅ Succeeded"},
 	}
 
 	for _, d := range data {

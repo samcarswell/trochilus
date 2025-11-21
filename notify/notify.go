@@ -51,13 +51,12 @@ func getNotifyText(
 		strconv.FormatInt(run.Id, 10) + " - " +
 		core.FormatStatus(run.Status) +
 		tagChannelIfFail(run.Status) +
-		logFileIfExists(run.LogFile) +
-		logOutputIfConfigured(run.NotifyLogContent, run.LogFile)
+		logFileAndOutput(run.NotifyLogContent, run.LogFile)
 }
 
-func logOutputIfConfigured(notifyLogContent bool, logFile string) string {
+func logFileAndOutput(notifyLogContent bool, logFile string) string {
 	if !notifyLogContent {
-		return ""
+		return logFileIfExists(logFile)
 	}
 	if logFile == "" {
 		return ""
@@ -67,7 +66,7 @@ func logOutputIfConfigured(notifyLogContent bool, logFile string) string {
 		log.Printf("Unable to read logfile: %s. Notify message will omit it.", logFile)
 		return ""
 	}
-	return "\nLog Content:\n" + "```\n" + string(logContent) + "```"
+	return "\nLog:\n" + "```\n" + string(logContent) + "```"
 }
 
 func hostnameIfExists(hostname string) string {

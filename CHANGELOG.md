@@ -8,12 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - Handling SIGINT in `exec` by failing the run.
 - Filtering by cron in `run list`.
 
 ### Fixed
 
 - Issues using `exec` with commands that chain or pipe multiple commands.
+
+### Removed
+
+- Crons configured with `--notify-log` only notify the raw log content; the log path has been removed.
 
 ## [0.1.1] - 2025-11-09
 

@@ -41,7 +41,7 @@ var addCmd = &cobra.Command{
 func init() {
 	CronCmd.AddCommand(addCmd)
 	addCmd.Flags().String("name", "", "Cron Name (required)")
-	addCmd.Flags().Bool("notify-log", false, "Includes log output in notification message (default false)")
+	addCmd.Flags().Bool("notify-log", false, "Includes the raw log output rather than the log filename in notification messages (default false)")
 	if err := addCmd.MarkFlagRequired("name"); err != nil {
 		log.Fatalf("Unable to mark name as required %s", err)
 	}
