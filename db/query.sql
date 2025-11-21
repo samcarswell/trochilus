@@ -53,3 +53,8 @@ select runs.end_time is not null
 from runs
 where runs.id = ?;
 
+-- name: UpdateCron :exec
+update crons
+set name = ?2, notify_log_content = ?3
+where id == ?1;
+

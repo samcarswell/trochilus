@@ -226,3 +226,20 @@ func (q *Queries) StartRun(ctx context.Context, arg StartRunParams) (int64, erro
 	err := row.Scan(&id)
 	return id, err
 }
+
+const updateCron = `-- name: UpdateCron :exec
+update crons
+set name = ?2, notify_log_content = ?3
+where id == ?1
+`
+
+type UpdateCronParams struct {
+	ID               int64
+	Name             string
+	NotifyLogContent bool
+}
+
+func (q *Queries) UpdateCron(ctx context.Context, arg UpdateCronParams) error {
+	_, err := q.db.ExecContext(ctx, updateCron, arg.ID, arg.Name, arg.NotifyLogContent)
+	return err
+}
