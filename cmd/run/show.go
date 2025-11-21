@@ -22,6 +22,7 @@ type RunShow struct {
 	LogFile       string
 	SystemLogFile string
 	Status        string
+	Duration      string
 }
 
 var showCmd = &cobra.Command{
@@ -48,6 +49,9 @@ var showCmd = &cobra.Command{
 			LogFile:       runRow.Run.LogFile,
 			SystemLogFile: runRow.Run.ExecLogFile,
 			Status:        runRow.Run.Status,
+		}
+		if runRow.Run.EndTime.Valid {
+			data.Duration = data.EndTime.Sub(data.StartTime).String()
 		}
 		core.PrintJson(data)
 	},
