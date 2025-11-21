@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Handling SIGINT in `exec` by failing the run.
+
 ### Fixed
 
 - Issues using `exec` with commands that chain or pipe multiple commands.

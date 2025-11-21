@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 
@@ -87,6 +88,8 @@ func execRun(
 	logFile string,
 	args []string,
 ) data.GetRunRow {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
 	cronRow, err := db.GetCron(ctx, cronName)
 	if err != nil {
 		if err == sql.ErrNoRows {
