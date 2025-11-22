@@ -22,12 +22,14 @@ var listCmd = &cobra.Command{
 		cronName := opts.GetStringOptOrExit(cmd, nameOpt)
 		queries := config.GetDatabase(cmd.Context())
 
-		_, err := queries.GetCron(cmd.Context(), cronName)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				core.LogErrorAndExit(logger, errors.New("cron with name '"+cronName+"' not found"))
-			} else {
-				core.LogErrorAndExit(logger, err)
+		if cronName != "" {
+			_, err := queries.GetCron(cmd.Context(), cronName)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					core.LogErrorAndExit(logger, errors.New("cron with name '"+cronName+"' not found"))
+				} else {
+					core.LogErrorAndExit(logger, err)
+				}
 			}
 		}
 
