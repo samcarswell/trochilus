@@ -39,7 +39,6 @@ Ensure the `troc` binary is available in your path. eg. `PATH=$PATH:~/.local/bin
 
 Executing `troc` for the first time will setup your config and database with the default settings:
 
-// TODO: update log output
 ```log
 fsh ❯ troc exec --name "test" "echo 'Testing...'"
 time=2025-11-09T14:02:31.182+11:00 level=INFO msg="Creating config directory at /home/srcarswell/.config/troc"
@@ -224,7 +223,7 @@ should be placed in this directory.
 
 `./migration [migration_name]`
 
-This will create a new migration file in `./db/migrations/` which can updated
+This will create a new migration file in `./db/migrations/` which can be updated
 to include the raw sql migration statements.
 
 All `./db/migrations/*sql` files are embedded into the binary and ran
