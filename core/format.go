@@ -11,11 +11,11 @@ func FormatStatus(status RunStatus) string {
 	case RunStatusFailed:
 		return "❌ " + string(status)
 	case RunStatusRunning:
-		return "⚙️ " + string(status)
+		return "🚀 " + string(status)
 	case RunStatusSkipped:
 		return "⚠️ " + string(status)
-	case RunStatusKilled:
-		return "💀 " + string(status)
+	case RunStatusTerminated:
+		return "💥 " + string(status)
 	}
 	return string(status)
 }

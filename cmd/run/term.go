@@ -14,11 +14,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var killCmd = &cobra.Command{
-	Use:   "kill",
-	Short: "Manually kill a run.",
+var termCmd = &cobra.Command{
+	Use:   "term",
+	Short: "Manually terminate a run.",
 	Long: `
-Manually fail a run.
+Manually terminate a run.
 
 This command is to handle situations where a run has been killed via SIGKILL.
 In this case troc cannot gracefully fail the run, and will be left in a state of 'running'.
@@ -46,7 +46,7 @@ This command will fail if the run is in any other state than 'running'.
 			core.LogErrorAndExit(logger, errors.New("run must be in a running state to manually fail"))
 		}
 		err = queries.EndRun(cmd.Context(), data.EndRunParams{
-			Status: string(core.RunStatusKilled),
+			Status: string(core.RunStatusTerminated),
 			ID:     runId,
 		})
 		if err != nil {
@@ -77,10 +77,10 @@ This command will fail if the run is in any other state than 'running'.
 }
 
 func init() {
-	RunCmd.AddCommand(killCmd)
+	RunCmd.AddCommand(termCmd)
 
-	killCmd.Flags().Int64P("run-id", "r", 0, "Run id")
-	if err := killCmd.MarkFlagRequired("run-id"); err != nil {
+	termCmd.Flags().Int64P("run-id", "r", 0, "Run id")
+	if err := termCmd.MarkFlagRequired("run-id"); err != nil {
 		core.LogErrorAndExit(slog.Default(), err)
 	}
 }

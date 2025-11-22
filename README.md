@@ -24,10 +24,10 @@ Named after the legendary bird described by Herodotus in [The Histories](https:/
 
 ## Build
 
-Checkout the relevant release tag. eg. `0.1.0`; you can build on any commit but there might be issues.
+Checkout the relevant release tag. eg. `0.2.0`; you can build on any commit but there might be issues.
 
 ```bash
-git checkout 0.1.0
+git checkout 0.2.0
 ./build
 ```
 
@@ -56,15 +56,13 @@ time=2025-11-09T14:02:31.197+11:00 level=INFO msg="Run created with ID 1"
 time=2025-11-09T14:02:31.199+11:00 level=INFO msg="Run 1 completed: Succeeded"
 {
     "ID": 1,
-    "CronID": 1,
-    "StartTime": "2025-11-09T03:02:31Z",
-    "EndTime": {
-        "Time": "2025-11-09T03:02:31Z",
-        "Valid": true
-    },
+    "CronName": "test",
+    "StartTime": "2025-11-22 12:46:01 +1100 AEDT",
+    "EndTime": "2025-11-22 12:46:02 +1100 AEDT",
     "LogFile": "/tmp/test.4227158531.log",
-    "ExecLogFile": "/tmp/trocsys_wfnzz_20251109T030231.log",
+    "SystemLogFile": "/tmp/trocsys_wfnzz_20251109T030231.log",
     "Status": "Succeeded"
+    "Duration": "1s"
 }
 ```
 
@@ -102,6 +100,7 @@ eg. `TROC_DATABASE` or `TROC_NOTIFY_SLACK_TOKEN`.
 | Name | Description | Default |
 | - | - | - |
 | `database` | Path to the sqlite database. | `~/.config/troc/troc.db`
+| `localtime` | Display dates in local time rather than UTC. | `false`
 | `lockdir` | Directory of cron lock files. | `$TMPDIR` if not empty, otherwise `/tmp`
 | `logdir` | Directory of cron log files. | `$TMPDIR` if not empty, otherwise `/tmp`
 | `notify.hostname` | Name of server when pushing notifications. eg. `cron-name@hostname` | Output of `hostname`
@@ -137,11 +136,12 @@ Output:
 {
     "ID": 1,
     "CronName": "daily-sync",
-    "StartTime": "2025-11-04T07:03:44Z",
-    "EndTime": "2025-11-04T07:03:54Z",
+    "StartTime": "2025-11-22 12:46:01 +1100 AEDT",
+    "EndTime": "2025-11-22 12:46:02 +1100 AEDT",
     "LogFile": "/tmp/daily-sync.3159256558.log",
     "SystemLogFile": "/tmp/trocsys_pgqlq_20251104T070344.log",
-    "Status": Succeeded
+    "Status": "Succeeded",
+    "Duration": "1s"
 }
 ```
 
@@ -153,13 +153,33 @@ daily-sync@example-server: run 84 - ✅: Succeeded
 Log: /tmp/daily-sync.3159256558.log
 ```
 
-## Watching a running cron
+## Watching a run
 
 Use `troc run watch -r [RUN_ID]` to tail the logs of a running cron until it completes. If the cron has already ran, it will print the logs and immediately exit.
 
+## Details of a run
+
+`troc run show -r [RUN_ID]`
+
+## Manually terminating a run
+
+If a `troc` run process was killed using SIGKILL, it cannot be gracefully handled.
+As a result the run will be left in a `Running` state.
+These can be manually set to `Terminated` using `troc run kill -r [RUN_ID]`.
+
+Note that this will not check if the process is still running, or attempt to terminate it.
+Only run this if you have determined that the run is not running and it's state is still `Running`.
+
+If the run is still in progress, and `troc run kill` has been ran on it,
+the run will still correctly update it's state once it completes.
+
 ## Run history
 
-Use `troc run list` to see a list of historical runs.
+Use `troc run list` to see a list of historical runs. Optionally filter on `--name`.
+
+## Update cron info
+
+A cron name and log settings can be updated using `troc cron update`.
 
 ## Crontab example:
 
@@ -168,6 +188,17 @@ PATH=$PATH:/usr/local/bin:/usr/bin # Ensuring that troc and rsync is in the path
 
 */5 * * * * troc exec --name 'daily-sync' "rsync --avh /tmp/source-dir /tmp/dest-dir" --notify
 ```
+
+## Run states
+
+| Name | Description |
+| - | - |
+| `Running` | Run is still actively running. |
+| `Skipped` | The run was skipped as there is already another run of the same cron in progress. |
+| `Succeeded` | The run completed with an exit code == 0. |
+| `Failed` | The run completed with an exit code != 0. |
+| `Terminated` | The run was interrupted. |
+
 
 ## Troubleshooting
 

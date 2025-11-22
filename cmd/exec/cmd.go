@@ -175,7 +175,7 @@ func execRun(
 	if err != nil {
 		if err.Error() == "signal: interrupt" {
 			logger.Error("Run has been interrupted")
-			status = core.RunStatusKilled
+			status = core.RunStatusTerminated
 		} else {
 			logger.Error("Error occurred during run", "error", err)
 			status = core.RunStatusFailed

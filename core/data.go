@@ -3,11 +3,11 @@ package core
 type RunStatus string
 
 const (
-	RunStatusRunning   RunStatus = "Running"
-	RunStatusSkipped   RunStatus = "Skipped"
-	RunStatusSucceeded RunStatus = "Succeeded"
-	RunStatusFailed    RunStatus = "Failed"
-	RunStatusKilled    RunStatus = "Killed"
+	RunStatusRunning    RunStatus = "Running"
+	RunStatusSkipped    RunStatus = "Skipped"
+	RunStatusSucceeded  RunStatus = "Succeeded"
+	RunStatusFailed     RunStatus = "Failed"
+	RunStatusTerminated RunStatus = "Terminated"
 )
 
 type RunShow struct {

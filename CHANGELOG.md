@@ -9,11 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Handling SIGINT in `exec` by setting run state to `Killed`.
+- Handling SIGINT in `exec` by setting run state to `Terminated`.
 - Filtering by cron in `run list`.
 - `cron update` command.
 - Optionally display times in local timezone. Config value: `localtime=true`.
-- `run kill` command to manually set run state to `Killed` for orphaned `Running` runs. eg. runs that have been killed using SIGKILL, since we cannot gracefully handle it.
+- `run kill` command to manually set run state to `Terminated` for orphaned `Running` runs. eg. runs that have been killed using SIGKILL, since we cannot gracefully handle it.
 
 ### Fixed
 

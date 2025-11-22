@@ -8,7 +8,7 @@ create table if not exists runs1 (
     exec_log_file varchar not null,
     status varchar not null,
     constraint fk_cron_id foreign key(cron_id) references crons(id),
-    constraint ck_status check (status in ("Running", "Skipped", "Succeeded", "Failed", "Killed"))
+    constraint ck_status check (status in ("Running", "Skipped", "Succeeded", "Failed", "Terminated"))
 );
 insert into runs1
 (id, cron_id, start_time, end_time, log_file, exec_log_file, status)
@@ -34,11 +34,11 @@ insert into runs1
 (id, cron_id, start_time, end_time, log_file, exec_log_file, status)
     select id, cron_id, start_time, end_time, log_file, exec_log_file, status
     from runs
-    where status != "Killed";
+    where status != "Terminated";
 insert into runs1
 (id, cron_id, start_time, end_time, log_file, exec_log_file, "Failed")
     select id, cron_id, start_time, end_time, log_file, exec_log_file, status
     from runs
-    where status = "Killed";
+    where status = "Terminated";
 drop table runs;
 alter table runs1 rename to runs;
