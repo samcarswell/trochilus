@@ -14,6 +14,8 @@ func FormatStatus(status RunStatus) string {
 		return "⚙️ " + string(status)
 	case RunStatusSkipped:
 		return "⚠️ " + string(status)
+	case RunStatusKilled:
+		return "💀 " + string(status)
 	}
 	return string(status)
 }

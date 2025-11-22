@@ -173,8 +173,13 @@ func execRun(
 	err = runCmd.Run()
 	status := core.RunStatusSucceeded
 	if err != nil {
-		logger.Error("Error occurred during run", "error", err)
-		status = core.RunStatusFailed
+		if err.Error() == "signal: interrupt" {
+			logger.Error("Run has been interrupted")
+			status = core.RunStatusKilled
+		} else {
+			logger.Error("Error occurred during run", "error", err)
+			status = core.RunStatusFailed
+		}
 	}
 	db.EndRun(context.Background(), data.EndRunParams{
 		Status: string(status),

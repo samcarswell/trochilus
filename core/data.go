@@ -7,6 +7,7 @@ const (
 	RunStatusSkipped   RunStatus = "Skipped"
 	RunStatusSucceeded RunStatus = "Succeeded"
 	RunStatusFailed    RunStatus = "Failed"
+	RunStatusKilled    RunStatus = "Killed"
 )
 
 type RunShow struct {
