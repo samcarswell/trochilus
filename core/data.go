@@ -12,7 +12,7 @@ const (
 
 type RunShow struct {
 	ID            int64
-	CronName      string
+	JobName       string
 	StartTime     string
 	EndTime       string
 	LogFile       string

@@ -17,6 +17,9 @@ insert into runs1
 drop table runs;
 alter table runs1 rename to runs;
 
+alter table crons rename to jobs;
+alter table runs rename column cron_id to job_id;
+
 -- migrate:down
 create table if not exists runs1 (
     id integer primary key autoincrement,
@@ -42,3 +45,6 @@ insert into runs1
     where status = "Terminated";
 drop table runs;
 alter table runs1 rename to runs;
+
+alter table jobs rename to crons;
+alter table runs rename column job_id to cron_id;

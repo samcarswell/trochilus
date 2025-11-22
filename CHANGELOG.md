@@ -10,10 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Handling SIGINT in `exec` by setting run state to `Terminated`.
-- Filtering by cron in `run list`.
+- Filtering by job in `run list`.
 - `cron update` command.
 - Optionally display times in local timezone. Config value: `localtime=true`.
 - `run term` command to manually set run state to `Terminated` for orphaned `Running` runs. eg. runs that have been killed using SIGKILL, since we cannot gracefully handle it.
+
+### Changed
+
+- Moved `cron [add|list|update]` to `job [add|list|update]`.
 
 ### Fixed
 
@@ -21,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
-- Crons configured with `--notify-log` only notify the raw log content; the log path has been removed.
+- Jobs configured with `--notify-log` only notify the raw log content; the log path has been removed.
 
 ## [0.1.1] - 2025-11-09
 

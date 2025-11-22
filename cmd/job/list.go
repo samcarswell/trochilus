@@ -13,17 +13,17 @@ import (
 
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "Lists crons",
+	Short: "List jobs",
 	Run: func(cmd *cobra.Command, args []string) {
 		queries := config.GetDatabase(cmd.Context())
 
-		cronRows, err := queries.GetCrons(context.Background())
+		jobRows, err := queries.GetJobs(context.Background())
 		if err != nil {
-			core.LogErrorAndExit(slog.Default(), err, errors.New("unable to get crons"))
+			core.LogErrorAndExit(slog.Default(), err, errors.New("unable to get jobs"))
 		}
 		tbl := table.New("ID", "Name", "Notify Log Content")
-		for _, cron := range cronRows {
-			tbl.AddRow(cron.Cron.ID, cron.Cron.Name, cron.Cron.NotifyLogContent)
+		for _, job := range jobRows {
+			tbl.AddRow(job.Job.ID, job.Job.Name, job.Job.NotifyLogContent)
 		}
 		tbl.Print()
 
@@ -31,5 +31,5 @@ var listCmd = &cobra.Command{
 }
 
 func init() {
-	CronCmd.AddCommand(listCmd)
+	JobCmd.AddCommand(listCmd)
 }

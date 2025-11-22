@@ -8,11 +8,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var CronCmd = &cobra.Command{
-	Use:   "cron",
-	Short: "Commands related to crons",
+var JobCmd = &cobra.Command{
+	Use:   "job",
+	Short: "Commands related to jobs",
 }
 
 func init() {
-	cmd.RootCmd.AddCommand(CronCmd)
+	cmd.RootCmd.AddCommand(JobCmd)
 }

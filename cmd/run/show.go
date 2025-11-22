@@ -32,7 +32,7 @@ var showCmd = &cobra.Command{
 		}
 		data := core.RunShow{
 			ID:            runRow.Run.ID,
-			CronName:      runRow.Cron.Name,
+			JobName:       runRow.Job.Name,
 			StartTime:     core.FormatTime(runRow.Run.StartTime, conf.LocalTime),
 			EndTime:       core.FormatTime(runRow.Run.EndTime.Time, conf.LocalTime),
 			LogFile:       runRow.Run.LogFile,

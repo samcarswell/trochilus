@@ -62,7 +62,7 @@ This command will fail if the run is in any other state than 'running'.
 
 		data := core.RunShow{
 			ID:            updRunRow.Run.ID,
-			CronName:      updRunRow.Cron.Name,
+			JobName:       updRunRow.Job.Name,
 			StartTime:     core.FormatTime(updRunRow.Run.StartTime, conf.LocalTime),
 			EndTime:       core.FormatTime(updRunRow.Run.EndTime.Time, conf.LocalTime),
 			LogFile:       updRunRow.Run.LogFile,

@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-type Cron struct {
+type Job struct {
 	ID               int64
 	Name             string
 	NotifyLogContent bool
@@ -17,7 +17,7 @@ type Cron struct {
 
 type Run struct {
 	ID          int64
-	CronID      int64
+	JobID       int64
 	StartTime   time.Time
 	EndTime     sql.NullTime
 	LogFile     string

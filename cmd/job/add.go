@@ -16,31 +16,31 @@ import (
 
 var addCmd = &cobra.Command{
 	Use:   "add",
-	Short: "Add cron",
+	Short: "Add job",
 	Run: func(cmd *cobra.Command, args []string) {
 		logger := slog.Default()
-		cronName := opts.GetStringOptOrExit(cmd, "name")
+		jobName := opts.GetStringOptOrExit(cmd, "name")
 		notifyLog := opts.GetBoolOptOrExit(cmd, "notify-log")
 		queries := config.GetDatabase(cmd.Context())
 
-		newCronId, err := queries.CreateCron(cmd.Context(), data.CreateCronParams{
-			Name:             cronName,
+		newJobId, err := queries.CreateJob(cmd.Context(), data.CreateJobParams{
+			Name:             jobName,
 			NotifyLogContent: notifyLog,
 		})
 		if err != nil {
-			if strings.Contains(err.Error(), "UNIQUE constraint failed: crons.name") {
-				core.LogErrorAndExit(logger, err, errors.New("cron with name "+cronName+" already exists"))
+			if strings.Contains(err.Error(), "UNIQUE constraint failed: jobs.name") {
+				core.LogErrorAndExit(logger, err, errors.New("job with name "+jobName+" already exists"))
 			}
-			core.LogErrorAndExit(logger, err, errors.New("unable to create cron"))
+			core.LogErrorAndExit(logger, err, errors.New("unable to create job"))
 		}
 
-		logger.Info("Cron created with ID " + strconv.FormatInt(newCronId, 10) + " and name " + cronName)
+		logger.Info("Job created with ID " + strconv.FormatInt(newJobId, 10) + " and name " + jobName)
 	},
 }
 
 func init() {
-	CronCmd.AddCommand(addCmd)
-	addCmd.Flags().String("name", "", "Cron Name (required)")
+	JobCmd.AddCommand(addCmd)
+	addCmd.Flags().String("name", "", "Job Name (required)")
 	addCmd.Flags().Bool("notify-log", false, "Includes the raw log output rather than the log filename in notification messages (default false)")
 	if err := addCmd.MarkFlagRequired("name"); err != nil {
 		log.Fatalf("Unable to mark name as required %s", err)

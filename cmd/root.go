@@ -27,8 +27,8 @@ var version = "development"
 var RootCmd = &cobra.Command{
 	Use:     cliName,
 	Version: version,
-	Short:   "Trochilus - simple cron monitoring",
-	Long: `Trochilus - simple cron monitoring
+	Short:   "Trochilus - simple job monitoring",
+	Long: `Trochilus - simple job monitoring
 	
 https://github.com/samcarswell/trochilus
 	`,
@@ -45,7 +45,7 @@ func setupContext(cmd *cobra.Command) {
 	}
 	var l *slog.Logger
 	if cmd.CommandPath() == cliName+" exec" {
-		// If we're executing a cron, we need to log to file
+		// If we're executing a job, we need to log to file
 		logFile, err := core.CreateSyslog(conf.LogDir)
 		if err != nil {
 			core.LogErrorAndExit(slog.Default(), err, errors.New("unable to create trocsys log"))

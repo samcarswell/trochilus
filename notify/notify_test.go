@@ -9,7 +9,7 @@ import (
 func Test_getNotifyText(t *testing.T) {
 	data := []struct {
 		name             string
-		cronName         string
+		jobName          string
 		runId            int64
 		runStatus        core.RunStatus
 		logFile          string
@@ -39,7 +39,7 @@ Log:
 		t.Run(d.name, func(t *testing.T) {
 			notifyStr := getNotifyText(
 				RunNotifyInfo{
-					Name:             d.cronName,
+					Name:             d.jobName,
 					NotifyLogContent: d.notifyLogContent,
 					Id:               d.runId,
 					Status:           d.runStatus,
