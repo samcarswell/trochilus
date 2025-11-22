@@ -11,9 +11,9 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/gofrs/flock"
 	"github.com/samcarswell/trochilus/cmd"
@@ -34,10 +34,11 @@ var notifyOpt = "notify"
 // be revisited before a v1
 var execCmd = &cobra.Command{
 	Use:   "exec",
-	Short: "Run a CRON command",
+	Short: "Run a job",
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		logger := slog.Default()
-		cronName := opts.GetStringOptOrExit(cmd, nameOpt)
+		jobName := opts.GetStringOptOrExit(cmd, nameOpt)
 		notifyOpt := opts.GetBoolOptOrExit(cmd, notifyOpt)
 		conf := config.GetConfig()
 		queries := config.GetDatabase(cmd.Context())
@@ -56,21 +57,33 @@ var execCmd = &cobra.Command{
 		completedRun := execRun(
 			cmd.Context(),
 			logger,
-			cronName,
+			jobName,
 			notifyOpt,
 			conf,
 			queries,
 			logFile,
 			args,
 		)
-		core.PrintJson(completedRun.Run)
+		data := core.RunShow{
+			ID:            completedRun.Run.ID,
+			JobName:       completedRun.Job.Name,
+			StartTime:     core.FormatTime(completedRun.Run.StartTime, conf.LocalTime),
+			EndTime:       core.FormatTime(completedRun.Run.EndTime.Time, conf.LocalTime),
+			LogFile:       completedRun.Run.LogFile,
+			SystemLogFile: completedRun.Run.ExecLogFile,
+			Status:        completedRun.Run.Status,
+		}
+		if completedRun.Run.EndTime.Valid {
+			data.Duration = completedRun.Run.EndTime.Time.Sub(completedRun.Run.StartTime).String()
+		}
+		core.PrintJson(data)
 	},
 }
 
 func init() {
 	cmd.RootCmd.AddCommand(execCmd)
 
-	execCmd.Flags().String(nameOpt, "", "Name of cron to execute. Will create it if it does not exist")
+	execCmd.Flags().String(nameOpt, "", "Name of job to execute. Will create it if it does not exist")
 	if err := execCmd.MarkFlagRequired(nameOpt); err != nil {
 		core.LogErrorAndExit(slog.Default(), err)
 	}
@@ -80,41 +93,43 @@ func init() {
 func execRun(
 	ctx context.Context,
 	logger *slog.Logger,
-	cronName string,
+	jobName string,
 	isNotify bool,
 	conf config.Config,
 	db *data.Queries,
 	logFile string,
 	args []string,
 ) data.GetRunRow {
-	cronRow, err := db.GetCron(ctx, cronName)
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	jobRow, err := db.GetJob(ctx, jobName)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			log.Print("Cron not registered. Creating new Cron with name " + cronName)
+			log.Print("Job not registered. Creating new job with name " + jobName)
 		} else {
 			core.LogErrorAndExit(logger, err)
 		}
 	}
-	if cronRow == (data.GetCronRow{}) {
-		id, err := db.CreateCron(context.Background(), data.CreateCronParams{
-			Name:             cronName,
+	if jobRow == (data.GetJobRow{}) {
+		id, err := db.CreateJob(context.Background(), data.CreateJobParams{
+			Name:             jobName,
 			NotifyLogContent: false,
 		})
 		if err != nil {
 			core.LogErrorAndExit(logger, err)
 		}
-		cronRow.Cron.Name = cronName
-		cronRow.Cron.ID = id
+		jobRow.Job.Name = jobName
+		jobRow.Job.ID = id
 	}
 
-	lockFile := filepath.Join(conf.LockDir, cronName+".lock")
+	lockFile := filepath.Join(conf.LockDir, jobName+".lock")
 	f := flock.New(lockFile)
 
 	locked, err := f.TryLock()
 
 	if err != nil || !locked {
 		return skipRun(
-			cronRow.Cron,
+			jobRow.Job,
 			logFile,
 			conf.Notify,
 			db,
@@ -123,13 +138,13 @@ func execRun(
 		)
 	}
 	if !locked {
-		core.LogErrorAndExit(logger, errors.New("Unable to create lock for cron. Likely already running"))
+		core.LogErrorAndExit(logger, errors.New("unable to create lock for job. Likely already running"))
 	}
 
 	defer f.Unlock()
-	logger.Info("Created cron lock at " + lockFile)
+	logger.Info("Created job lock at " + lockFile)
 
-	stdout, err := os.CreateTemp(conf.LogDir, cronName+".*.log")
+	stdout, err := os.CreateTemp(conf.LogDir, jobName+".*.log")
 	if err != nil {
 		core.LogErrorAndExit(logger, err, errors.New("unable to create log file"))
 	}
@@ -140,7 +155,7 @@ func execRun(
 
 	logger.Info("Run log created at: " + stdout.Name())
 	runId, err := db.StartRun(context.Background(), data.StartRunParams{
-		CronID:      cronRow.Cron.ID,
+		JobID:       jobRow.Job.ID,
 		LogFile:     stdout.Name(),
 		ExecLogFile: logFile,
 	})
@@ -150,15 +165,21 @@ func execRun(
 
 	logger.Info("Run created with ID " + strconv.FormatInt(runId, 10))
 
-	cmdArgs := strings.Split(args[0], " ")
-	runCmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
+	cmdArgs := []string{"-c"}
+	cmdArgs = append(cmdArgs, args[0])
+	runCmd := exec.Command("/bin/sh", cmdArgs...)
 	runCmd.Stdout = stdoutLog
 	runCmd.Stderr = stdoutLog
 	err = runCmd.Run()
 	status := core.RunStatusSucceeded
 	if err != nil {
-		logger.Error("Error occurred during run", "error", err)
-		status = core.RunStatusFailed
+		if err.Error() == "signal: interrupt" {
+			logger.Error("Run has been interrupted")
+			status = core.RunStatusTerminated
+		} else {
+			logger.Error("Error occurred during run", "error", err)
+			status = core.RunStatusFailed
+		}
 	}
 	db.EndRun(context.Background(), data.EndRunParams{
 		Status: string(status),
@@ -176,11 +197,11 @@ func execRun(
 		ok, err := notify.NotifyRun(
 			conf.Notify,
 			notify.RunNotifyInfo{
-				Name:             completedRun.Cron.Name,
+				Name:             completedRun.Job.Name,
 				Id:               completedRun.Run.ID,
 				Status:           core.RunStatus(completedRun.Run.Status),
 				LogFile:          completedRun.Run.LogFile,
-				NotifyLogContent: cronRow.Cron.NotifyLogContent,
+				NotifyLogContent: jobRow.Job.NotifyLogContent,
 			},
 		)
 		if err != nil {
@@ -194,7 +215,7 @@ func execRun(
 }
 
 func skipRun(
-	cron data.Cron,
+	job data.Job,
 	execLogFile string,
 	notifyConf config.NotifyConfig,
 	queries *data.Queries,
@@ -202,7 +223,7 @@ func skipRun(
 	logger *slog.Logger,
 ) data.GetRunRow {
 	id, err := queries.SkipRun(ctx, data.SkipRunParams{
-		CronID:      cron.ID,
+		JobID:       job.ID,
 		ExecLogFile: execLogFile,
 	})
 	if err != nil {
@@ -214,15 +235,15 @@ func skipRun(
 		// TODO: need a standard function here to deal with errors and communicate to slack
 		core.LogErrorAndExit(logger, err, errors.New("unable to get updated run"))
 	}
-	logger.Warn("Skipping run " + strconv.FormatInt(id, 10) + ". Cron is already running.")
+	logger.Warn("Skipping run " + strconv.FormatInt(id, 10) + ". Job is already running.")
 	notify.NotifyRun(
 		notifyConf,
 		notify.RunNotifyInfo{
-			Name:             run.Cron.Name,
+			Name:             run.Job.Name,
 			Id:               run.Run.ID,
 			Status:           core.RunStatus(run.Run.Status),
 			LogFile:          "",
-			NotifyLogContent: cron.NotifyLogContent,
+			NotifyLogContent: job.NotifyLogContent,
 		},
 	)
 	row, err := queries.GetRun(ctx, run.Run.ID)

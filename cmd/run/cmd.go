@@ -10,7 +10,7 @@ import (
 
 var RunCmd = &cobra.Command{
 	Use:   "run",
-	Short: "Commands related to crons",
+	Short: "Commands related to runs",
 }
 
 func init() {

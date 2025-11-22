@@ -6,23 +6,12 @@ import (
 	"errors"
 	"log/slog"
 	"strconv"
-	"time"
 
 	"github.com/samcarswell/trochilus/config"
 	"github.com/samcarswell/trochilus/core"
 	"github.com/samcarswell/trochilus/opts"
 	"github.com/spf13/cobra"
 )
-
-type RunShow struct {
-	ID            int64
-	CronName      string
-	StartTime     time.Time
-	EndTime       time.Time
-	LogFile       string
-	SystemLogFile string
-	Status        string
-}
 
 var showCmd = &cobra.Command{
 	Use:   "show",
@@ -31,6 +20,7 @@ var showCmd = &cobra.Command{
 		logger := slog.Default()
 		runId := opts.GetInt64OrExit(cmd, "run-id")
 		queries := config.GetDatabase(cmd.Context())
+		conf := config.GetConfig()
 
 		runRow, err := queries.GetRun(context.Background(), runId)
 		if err != nil {
@@ -40,14 +30,17 @@ var showCmd = &cobra.Command{
 				core.LogErrorAndExit(logger, err)
 			}
 		}
-		data := RunShow{
+		data := core.RunShow{
 			ID:            runRow.Run.ID,
-			CronName:      runRow.Cron.Name,
-			StartTime:     runRow.Run.StartTime,
-			EndTime:       runRow.Run.EndTime.Time,
+			JobName:       runRow.Job.Name,
+			StartTime:     core.FormatTime(runRow.Run.StartTime, conf.LocalTime),
+			EndTime:       core.FormatTime(runRow.Run.EndTime.Time, conf.LocalTime),
 			LogFile:       runRow.Run.LogFile,
 			SystemLogFile: runRow.Run.ExecLogFile,
 			Status:        runRow.Run.Status,
+		}
+		if runRow.Run.EndTime.Valid {
+			data.Duration = runRow.Run.EndTime.Time.Sub(runRow.Run.StartTime).String()
 		}
 		core.PrintJson(data)
 	},

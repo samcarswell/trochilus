@@ -1,18 +1,18 @@
--- name: GetCron :one
+-- name: GetJob :one
 select
-    sqlc.embed(crons)
-from crons
-where crons.name = ?;
+    sqlc.embed(jobs)
+from jobs
+where jobs.name = ?;
 
--- name: CreateCron :one
-insert into crons
+-- name: CreateJob :one
+insert into jobs
     (name, notify_log_content)
 values (?, ?)
 returning id;
 
 -- name: StartRun :one
 insert into runs
-    (cron_id, start_time, log_file, exec_log_file, status)
+    (job_id, start_time, log_file, exec_log_file, status)
 values (?, current_timestamp, ?, ?, "Running")
 returning id;
 
@@ -23,32 +23,38 @@ where id = ?;
 
 -- name: SkipRun :one
 insert into runs
-    (cron_id, start_time, end_time, log_file, exec_log_file, status)
+    (job_id, start_time, end_time, log_file, exec_log_file, status)
 values (?, current_timestamp, current_timestamp, "", ?, "Skipped")
 returning id;
 
--- name: GetCrons :many
+-- name: GetJobs :many
 select
-    sqlc.embed(crons)
-from crons;
+    sqlc.embed(jobs)
+from jobs;
 
 -- name: GetRuns :many
 select
     sqlc.embed(runs),
-    sqlc.embed(crons)
-from runs, crons
-where runs.cron_id = crons.id;
+    sqlc.embed(jobs)
+from runs, jobs
+where runs.job_id = jobs.id
+and (?1 = '' or jobs.name = ?1);
 
 -- name: GetRun :one
 select
     sqlc.embed(runs),
-    sqlc.embed(crons)
-from runs, crons
-where runs.cron_id = crons.id
+    sqlc.embed(jobs)
+from runs, jobs
+where runs.job_id = jobs.id
 and runs.id = ?;
 
 -- name: IsRunFinished :one
 select runs.end_time is not null
 from runs
 where runs.id = ?;
+
+-- name: UpdateJob :exec
+update jobs
+set name = ?2, notify_log_content = ?3
+where id == ?1;
 

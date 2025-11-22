@@ -9,20 +9,20 @@ import (
 	"context"
 )
 
-const createCron = `-- name: CreateCron :one
-insert into crons
+const createJob = `-- name: CreateJob :one
+insert into jobs
     (name, notify_log_content)
 values (?, ?)
 returning id
 `
 
-type CreateCronParams struct {
+type CreateJobParams struct {
 	Name             string
 	NotifyLogContent bool
 }
 
-func (q *Queries) CreateCron(ctx context.Context, arg CreateCronParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, createCron, arg.Name, arg.NotifyLogContent)
+func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, createJob, arg.Name, arg.NotifyLogContent)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -44,44 +44,44 @@ func (q *Queries) EndRun(ctx context.Context, arg EndRunParams) error {
 	return err
 }
 
-const getCron = `-- name: GetCron :one
+const getJob = `-- name: GetJob :one
 select
-    crons.id, crons.name, crons.notify_log_content
-from crons
-where crons.name = ?
+    jobs.id, jobs.name, jobs.notify_log_content
+from jobs
+where jobs.name = ?
 `
 
-type GetCronRow struct {
-	Cron Cron
+type GetJobRow struct {
+	Job Job
 }
 
-func (q *Queries) GetCron(ctx context.Context, name string) (GetCronRow, error) {
-	row := q.db.QueryRowContext(ctx, getCron, name)
-	var i GetCronRow
-	err := row.Scan(&i.Cron.ID, &i.Cron.Name, &i.Cron.NotifyLogContent)
+func (q *Queries) GetJob(ctx context.Context, name string) (GetJobRow, error) {
+	row := q.db.QueryRowContext(ctx, getJob, name)
+	var i GetJobRow
+	err := row.Scan(&i.Job.ID, &i.Job.Name, &i.Job.NotifyLogContent)
 	return i, err
 }
 
-const getCrons = `-- name: GetCrons :many
+const getJobs = `-- name: GetJobs :many
 select
-    crons.id, crons.name, crons.notify_log_content
-from crons
+    jobs.id, jobs.name, jobs.notify_log_content
+from jobs
 `
 
-type GetCronsRow struct {
-	Cron Cron
+type GetJobsRow struct {
+	Job Job
 }
 
-func (q *Queries) GetCrons(ctx context.Context) ([]GetCronsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getCrons)
+func (q *Queries) GetJobs(ctx context.Context) ([]GetJobsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getJobs)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetCronsRow
+	var items []GetJobsRow
 	for rows.Next() {
-		var i GetCronsRow
-		if err := rows.Scan(&i.Cron.ID, &i.Cron.Name, &i.Cron.NotifyLogContent); err != nil {
+		var i GetJobsRow
+		if err := rows.Scan(&i.Job.ID, &i.Job.Name, &i.Job.NotifyLogContent); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -97,16 +97,16 @@ func (q *Queries) GetCrons(ctx context.Context) ([]GetCronsRow, error) {
 
 const getRun = `-- name: GetRun :one
 select
-    runs.id, runs.cron_id, runs.start_time, runs.end_time, runs.log_file, runs.exec_log_file, runs.status,
-    crons.id, crons.name, crons.notify_log_content
-from runs, crons
-where runs.cron_id = crons.id
+    runs.id, runs.job_id, runs.start_time, runs.end_time, runs.log_file, runs.exec_log_file, runs.status,
+    jobs.id, jobs.name, jobs.notify_log_content
+from runs, jobs
+where runs.job_id = jobs.id
 and runs.id = ?
 `
 
 type GetRunRow struct {
-	Run  Run
-	Cron Cron
+	Run Run
+	Job Job
 }
 
 func (q *Queries) GetRun(ctx context.Context, id int64) (GetRunRow, error) {
@@ -114,34 +114,35 @@ func (q *Queries) GetRun(ctx context.Context, id int64) (GetRunRow, error) {
 	var i GetRunRow
 	err := row.Scan(
 		&i.Run.ID,
-		&i.Run.CronID,
+		&i.Run.JobID,
 		&i.Run.StartTime,
 		&i.Run.EndTime,
 		&i.Run.LogFile,
 		&i.Run.ExecLogFile,
 		&i.Run.Status,
-		&i.Cron.ID,
-		&i.Cron.Name,
-		&i.Cron.NotifyLogContent,
+		&i.Job.ID,
+		&i.Job.Name,
+		&i.Job.NotifyLogContent,
 	)
 	return i, err
 }
 
 const getRuns = `-- name: GetRuns :many
 select
-    runs.id, runs.cron_id, runs.start_time, runs.end_time, runs.log_file, runs.exec_log_file, runs.status,
-    crons.id, crons.name, crons.notify_log_content
-from runs, crons
-where runs.cron_id = crons.id
+    runs.id, runs.job_id, runs.start_time, runs.end_time, runs.log_file, runs.exec_log_file, runs.status,
+    jobs.id, jobs.name, jobs.notify_log_content
+from runs, jobs
+where runs.job_id = jobs.id
+and (?1 = '' or jobs.name = ?1)
 `
 
 type GetRunsRow struct {
-	Run  Run
-	Cron Cron
+	Run Run
+	Job Job
 }
 
-func (q *Queries) GetRuns(ctx context.Context) ([]GetRunsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getRuns)
+func (q *Queries) GetRuns(ctx context.Context, dollar_1 interface{}) ([]GetRunsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRuns, dollar_1)
 	if err != nil {
 		return nil, err
 	}
@@ -151,15 +152,15 @@ func (q *Queries) GetRuns(ctx context.Context) ([]GetRunsRow, error) {
 		var i GetRunsRow
 		if err := rows.Scan(
 			&i.Run.ID,
-			&i.Run.CronID,
+			&i.Run.JobID,
 			&i.Run.StartTime,
 			&i.Run.EndTime,
 			&i.Run.LogFile,
 			&i.Run.ExecLogFile,
 			&i.Run.Status,
-			&i.Cron.ID,
-			&i.Cron.Name,
-			&i.Cron.NotifyLogContent,
+			&i.Job.ID,
+			&i.Job.Name,
+			&i.Job.NotifyLogContent,
 		); err != nil {
 			return nil, err
 		}
@@ -189,18 +190,18 @@ func (q *Queries) IsRunFinished(ctx context.Context, id int64) (bool, error) {
 
 const skipRun = `-- name: SkipRun :one
 insert into runs
-    (cron_id, start_time, end_time, log_file, exec_log_file, status)
+    (job_id, start_time, end_time, log_file, exec_log_file, status)
 values (?, current_timestamp, current_timestamp, "", ?, "Skipped")
 returning id
 `
 
 type SkipRunParams struct {
-	CronID      int64
+	JobID       int64
 	ExecLogFile string
 }
 
 func (q *Queries) SkipRun(ctx context.Context, arg SkipRunParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, skipRun, arg.CronID, arg.ExecLogFile)
+	row := q.db.QueryRowContext(ctx, skipRun, arg.JobID, arg.ExecLogFile)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -208,20 +209,37 @@ func (q *Queries) SkipRun(ctx context.Context, arg SkipRunParams) (int64, error)
 
 const startRun = `-- name: StartRun :one
 insert into runs
-    (cron_id, start_time, log_file, exec_log_file, status)
+    (job_id, start_time, log_file, exec_log_file, status)
 values (?, current_timestamp, ?, ?, "Running")
 returning id
 `
 
 type StartRunParams struct {
-	CronID      int64
+	JobID       int64
 	LogFile     string
 	ExecLogFile string
 }
 
 func (q *Queries) StartRun(ctx context.Context, arg StartRunParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, startRun, arg.CronID, arg.LogFile, arg.ExecLogFile)
+	row := q.db.QueryRowContext(ctx, startRun, arg.JobID, arg.LogFile, arg.ExecLogFile)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
+}
+
+const updateJob = `-- name: UpdateJob :exec
+update jobs
+set name = ?2, notify_log_content = ?3
+where id == ?1
+`
+
+type UpdateJobParams struct {
+	ID               int64
+	Name             string
+	NotifyLogContent bool
+}
+
+func (q *Queries) UpdateJob(ctx context.Context, arg UpdateJobParams) error {
+	_, err := q.db.ExecContext(ctx, updateJob, arg.ID, arg.Name, arg.NotifyLogContent)
+	return err
 }

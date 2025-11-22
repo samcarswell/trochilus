@@ -5,9 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2025-11-23
+
+### Added
+
+- Handling SIGINT in `exec` by setting run state to `Terminated`.
+- Filtering by job in `run list`.
+- `job update` command.
+- `run term` command to manually set run state to `Terminated` for orphaned `Running` runs. eg. runs that have been killed using SIGKILL, since we cannot gracefully handle it.
+
+### Changed
+
+- Moved `cron [add|list|update]` to `job [add|list|update]`.
+- Display times in local timezone. This can be made UTC again using config value: `localtime=false`.
+
+### Fixed
+
+- Issues using `exec` with commands that chain or pipe multiple commands.
+
+### Removed
+
+- Jobs configured with `--notify-log` only notify the raw log content; the log path has been removed.
+
 ## [0.1.1] - 2025-11-09
 
 ### Fixed
+
 - Issue where database migration logs were sent stdout, breaking JSON output.
 - Uniform formatting for logs. Stderr is formatted as text, files are JSON.
 - `run watch` now fails for non-existent runs.

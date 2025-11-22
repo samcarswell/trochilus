@@ -162,17 +162,19 @@ type SlackConfig struct {
 }
 
 type Config struct {
-	Database string
-	LockDir  string
-	LogDir   string
-	Notify   NotifyConfig
+	Database  string
+	LockDir   string
+	LogDir    string
+	Notify    NotifyConfig
+	LocalTime bool
 }
 
 func GetConfig() Config {
 	return Config{
-		Database: viper.GetString("database"),
-		LockDir:  viper.GetString("lockdir"),
-		LogDir:   viper.GetString("logdir"),
+		Database:  viper.GetString("database"),
+		LockDir:   viper.GetString("lockdir"),
+		LogDir:    viper.GetString("logdir"),
+		LocalTime: viper.GetBool("localtime"),
 		Notify: NotifyConfig{
 			Hostname: viper.GetString("notify.hostname"),
 			Slack: SlackConfig{
