@@ -110,7 +110,9 @@ eg. `TROC_DATABASE` or `TROC_NOTIFY_SLACK_TOKEN`.
 Any invocation of `troc` will check for a database located at the `database` config value.
 If it does not exist, it will create it.
 
-## Running a cron
+## Usage
+
+### Running a cron
 
 `troc exec` handles the execution of a job. Use `--name` to specify the name of
 the cronjob. If it does not exist, it will be created.
@@ -153,15 +155,15 @@ daily-sync@example-server: run 84 - ✅: Succeeded
 Log: /tmp/daily-sync.3159256558.log
 ```
 
-## Watching a run
+### Watching a run
 
 Use `troc run watch -r [RUN_ID]` to tail the logs of a running cron until it completes. If the cron has already ran, it will print the logs and immediately exit.
 
-## Details of a run
+### Details of a run
 
 `troc run show -r [RUN_ID]`
 
-## Manually terminating a run
+### Manually terminating a run
 
 If a `troc` run process was killed using SIGKILL, it cannot be gracefully handled.
 As a result the run will be left in a `Running` state.
@@ -173,15 +175,15 @@ Only run this if you have determined that the run is not running and it's state 
 If the run is still in progress, and `troc run term` has been ran on it,
 the run will still correctly update it's state once it completes.
 
-## Run history
+### Run history
 
 Use `troc run list` to see a list of historical runs. Optionally filter on `--name`.
 
-## Update cron info
+### Update cron info
 
 A cron name and log settings can be updated using `troc cron update`.
 
-## Crontab example:
+### Crontab example:
 
 ```
 PATH=$PATH:/usr/local/bin:/usr/bin # Ensuring that troc and rsync is in the path
@@ -189,7 +191,7 @@ PATH=$PATH:/usr/local/bin:/usr/bin # Ensuring that troc and rsync is in the path
 */5 * * * * troc exec --name 'daily-sync' "rsync --avh /tmp/source-dir /tmp/dest-dir" --notify
 ```
 
-## Run states
+### Run states
 
 | Name | Description |
 | - | - |
@@ -205,6 +207,34 @@ PATH=$PATH:/usr/local/bin:/usr/bin # Ensuring that troc and rsync is in the path
 If `exec` fails to create a run, it errored before it could create the run.
 This is probably caused by configuration issues. You can debug this by looking through the
 system logs: `[logdir]/trocsys*.log`
+
+## Development
+
+### SQL queries
+
+All query code is generated from `./db/query.sql` using [sqlc](https://github.com/sqlc-dev/sqlc).
+
+To update/add a query, make the changes needed to `./db/query.sql` and then run
+`sqlc generate`. This will generate code in `./data`; no non-generated code
+should be placed in this directory.
+
+### Database migrations
+
+`./migration [migration_name]`
+
+This will create a new migration file in `./db/migrations/` which can updated
+to include the raw sql migration statements.
+
+All `./db/migrations/*sql` files are embedded into the binary and ran
+at startup; so just adding the migration file to that directory is enough.
+
+### Running tests
+
+`go test ./...`
+
+### Test coverage
+
+`./coverage` to open a browser with the test coverage info.
 
 ## Goals
 
