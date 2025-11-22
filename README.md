@@ -115,7 +115,8 @@ If it does not exist, it will create it.
 ### Running a cron
 
 `troc exec` handles the execution of a job. Use `--name` to specify the name of
-the cronjob. If it does not exist, it will be created.
+the cronjob. If it does not exist, it will be created with the default settings;
+for anything non-default use `troc cron add` before `troc exec`.
 
 Use the args to pass the command you intend to run.
 
