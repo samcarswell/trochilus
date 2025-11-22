@@ -100,7 +100,7 @@ eg. `TROC_DATABASE` or `TROC_NOTIFY_SLACK_TOKEN`.
 | Name | Description | Default |
 | - | - | - |
 | `database` | Path to the sqlite database. | `~/.config/troc/troc.db`
-| `localtime` | Display dates in local time rather than UTC. | `false`
+| `localtime` | Display dates in local time rather than UTC. | `true`
 | `lockdir` | Directory of job lock files. | `$TMPDIR` if not empty, otherwise `/tmp`
 | `logdir` | Directory of job log files. | `$TMPDIR` if not empty, otherwise `/tmp`
 | `notify.hostname` | Name of server when pushing notifications. eg. `job-name@hostname` | Output of `hostname`

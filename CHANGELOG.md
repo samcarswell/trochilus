@@ -12,12 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Handling SIGINT in `exec` by setting run state to `Terminated`.
 - Filtering by job in `run list`.
 - `job update` command.
-- Optionally display times in local timezone. Config value: `localtime=true`.
 - `run term` command to manually set run state to `Terminated` for orphaned `Running` runs. eg. runs that have been killed using SIGKILL, since we cannot gracefully handle it.
 
 ### Changed
 
 - Moved `cron [add|list|update]` to `job [add|list|update]`.
+- Display times in local timezone. This can be made UTC again using config value: `localtime=false`.
 
 ### Fixed
 
