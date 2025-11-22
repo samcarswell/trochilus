@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Filtering by cron in `run list`.
 - `cron update` command.
 - Optionally display times in local timezone. Config value: `localtime=true`.
-- `run kill` command to manually set run state to `Terminated` for orphaned `Running` runs. eg. runs that have been killed using SIGKILL, since we cannot gracefully handle it.
+- `run term` command to manually set run state to `Terminated` for orphaned `Running` runs. eg. runs that have been killed using SIGKILL, since we cannot gracefully handle it.
 
 ### Fixed
 

@@ -165,12 +165,12 @@ Use `troc run watch -r [RUN_ID]` to tail the logs of a running cron until it com
 
 If a `troc` run process was killed using SIGKILL, it cannot be gracefully handled.
 As a result the run will be left in a `Running` state.
-These can be manually set to `Terminated` using `troc run kill -r [RUN_ID]`.
+These can be manually set to `Terminated` using `troc run term -r [RUN_ID]`.
 
 Note that this will not check if the process is still running, or attempt to terminate it.
 Only run this if you have determined that the run is not running and it's state is still `Running`.
 
-If the run is still in progress, and `troc run kill` has been ran on it,
+If the run is still in progress, and `troc run term` has been ran on it,
 the run will still correctly update it's state once it completes.
 
 ## Run history
