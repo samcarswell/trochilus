@@ -64,7 +64,19 @@ var execCmd = &cobra.Command{
 			logFile,
 			args,
 		)
-		core.PrintJson(completedRun.Run)
+		data := core.RunShow{
+			ID:            completedRun.Run.ID,
+			CronName:      completedRun.Cron.Name,
+			StartTime:     core.FormatTime(completedRun.Run.StartTime, conf.LocalTime),
+			EndTime:       core.FormatTime(completedRun.Run.EndTime.Time, conf.LocalTime),
+			LogFile:       completedRun.Run.LogFile,
+			SystemLogFile: completedRun.Run.ExecLogFile,
+			Status:        completedRun.Run.Status,
+		}
+		if completedRun.Run.EndTime.Valid {
+			data.Duration = completedRun.Run.EndTime.Time.Sub(completedRun.Run.StartTime).String()
+		}
+		core.PrintJson(data)
 	},
 }
 

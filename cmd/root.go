@@ -97,6 +97,7 @@ func init() {
 	viper.SetDefault("logdir", os.TempDir())
 	viper.SetDefault("lockdir", os.TempDir())
 	viper.SetDefault("notify.hostname", hostname)
+	viper.SetDefault("localtime", false)
 	viper.AddConfigPath(configPath)
 	viper.SetConfigName(configName)
 	viper.SetConfigType(configType)

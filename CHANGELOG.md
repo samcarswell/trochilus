@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Handling SIGINT in `exec` by failing the run.
 - Filtering by cron in `run list`.
 - `cron update` command.
+- Optionally display times in local timezone. Config value: `localtime=true`.
 
 ### Fixed
 

@@ -8,3 +8,14 @@ const (
 	RunStatusSucceeded RunStatus = "Succeeded"
 	RunStatusFailed    RunStatus = "Failed"
 )
+
+type RunShow struct {
+	ID            int64
+	CronName      string
+	StartTime     string
+	EndTime       string
+	LogFile       string
+	SystemLogFile string
+	Status        string
+	Duration      string
+}

@@ -19,6 +19,7 @@ var listCmd = &cobra.Command{
 	Short: "Lists runs",
 	Run: func(cmd *cobra.Command, args []string) {
 		logger := slog.Default()
+		conf := config.GetConfig()
 		cronName := opts.GetStringOptOrExit(cmd, nameOpt)
 		queries := config.GetDatabase(cmd.Context())
 
@@ -50,8 +51,8 @@ var listCmd = &cobra.Command{
 			tbl.AddRow(
 				run.Run.ID,
 				run.Cron.Name,
-				core.FormatTime(run.Run.StartTime),
-				core.FormatTime(run.Run.EndTime.Time),
+				core.FormatTime(run.Run.StartTime, conf.LocalTime),
+				core.FormatTime(run.Run.EndTime.Time, conf.LocalTime),
 				run.Run.LogFile,
 				run.Run.ExecLogFile,
 				core.FormatStatus(core.RunStatus(run.Run.Status)),

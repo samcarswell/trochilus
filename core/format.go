@@ -1,6 +1,8 @@
 package core
 
-import "time"
+import (
+	"time"
+)
 
 func FormatStatus(status RunStatus) string {
 	switch status {
@@ -16,9 +18,12 @@ func FormatStatus(status RunStatus) string {
 	return string(status)
 }
 
-func FormatTime(timeValue time.Time) string {
+func FormatTime(timeValue time.Time, useLocalTime bool) string {
 	if timeValue.IsZero() {
 		return ""
+	}
+	if useLocalTime {
+		return timeValue.In(time.Local).String()
 	}
 	return timeValue.String()
 }
