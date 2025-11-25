@@ -14,6 +14,8 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"strings"
+	"syscall"
 
 	"github.com/gofrs/flock"
 	"github.com/samcarswell/trochilus/cmd"
@@ -100,8 +102,6 @@ func execRun(
 	logFile string,
 	args []string,
 ) data.GetRunRow {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
 	jobRow, err := db.GetJob(ctx, jobName)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -170,11 +170,24 @@ func execRun(
 	runCmd := exec.Command("/bin/sh", cmdArgs...)
 	runCmd.Stdout = stdoutLog
 	runCmd.Stderr = stdoutLog
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		sig := <-c
+		if sig == syscall.SIGTERM {
+			err := runCmd.Process.Signal(syscall.SIGTERM)
+			if err != nil {
+				logger.Error("Failed to send SIGTERM to run.")
+			}
+		}
+	}()
+
 	err = runCmd.Run()
 	status := core.RunStatusSucceeded
 	if err != nil {
-		if err.Error() == "signal: interrupt" {
-			logger.Error("Run has been interrupted")
+		if strings.HasPrefix(err.Error(), "signal: ") {
+			logger.Error("Run has been terminated: " + err.Error())
 			status = core.RunStatusTerminated
 		} else {
 			logger.Error("Error occurred during run", "error", err)

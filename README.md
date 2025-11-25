@@ -206,7 +206,7 @@ PATH=$PATH:/usr/local/bin:/usr/bin # Ensuring that troc and rsync is in the path
 | `Skipped` | The run was skipped as there is already another run of the same job in progress. |
 | `Succeeded` | The run completed with an exit code == 0. |
 | `Failed` | The run completed with an exit code != 0. |
-| `Terminated` | The run was interrupted. |
+| `Terminated` | The run received a `SIGINT` or `SIGTERM`. |
 
 
 ## Troubleshooting
