@@ -3,9 +3,11 @@ package cmd
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"log/slog"
 
-	"github.com/rodaine/table"
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 	"github.com/samcarswell/trochilus/config"
 	"github.com/samcarswell/trochilus/core"
 	"github.com/samcarswell/trochilus/opts"
@@ -13,6 +15,7 @@ import (
 )
 
 var nameOpt = "name"
+var statusField = "Status"
 
 var listCmd = &cobra.Command{
 	Use:   "list",
@@ -38,27 +41,66 @@ var listCmd = &cobra.Command{
 		if err != nil {
 			core.LogErrorAndExit(slog.Default(), err)
 		}
-		tbl := table.New(
+		t := core.NewTable()
+		t.AppendHeader(table.Row{
 			"ID",
 			"Job Name",
 			"Start Time",
 			"End Time",
 			"Log File",
 			"Exec Log File",
-			"Status",
-		)
+			statusField,
+		})
 		for _, run := range runRows {
-			tbl.AddRow(
+			t.AppendRow(table.Row{
 				run.Run.ID,
 				run.Job.Name,
 				core.FormatTime(run.Run.StartTime, conf.LocalTime),
 				core.FormatTime(run.Run.EndTime.Time, conf.LocalTime),
 				run.Run.LogFile,
 				run.Run.ExecLogFile,
-				core.FormatStatus(core.RunStatus(run.Run.Status)),
-			)
+				core.FormatStatus(core.RunStatus(run.Run.Status), conf.Display.Emoji),
+			})
 		}
-		tbl.Print()
+
+		statusTransformer := text.Transformer(func(val interface{}) string {
+			if status, ok := val.(string); ok {
+				color := text.FgWhite
+				switch status {
+				case core.FormatStatus(core.RunStatusSucceeded, conf.Display.Emoji):
+					if conf.Display.Color.Status.Succeeded {
+						color = text.FgGreen
+					}
+				case core.FormatStatus(core.RunStatusFailed, conf.Display.Emoji):
+					if conf.Display.Color.Status.Failed {
+						color = text.FgHiRed
+					}
+				case core.FormatStatus(core.RunStatusRunning, conf.Display.Emoji):
+					if conf.Display.Color.Status.Running {
+						color = text.FgCyan
+					}
+				case core.FormatStatus(core.RunStatusSkipped, conf.Display.Emoji):
+					if conf.Display.Color.Status.Skipped {
+						color = text.FgYellow
+					}
+				case core.FormatStatus(core.RunStatusTerminated, conf.Display.Emoji):
+					if conf.Display.Color.Status.Terminated {
+						color = text.FgHiMagenta
+					}
+				}
+				return color.Sprintf("%s", status)
+			}
+			return fmt.Sprint(val)
+		})
+
+		t.SetColumnConfigs([]table.ColumnConfig{
+			{
+				Name:        statusField,
+				Transformer: statusTransformer,
+			},
+		})
+
+		t.Render()
 
 	},
 }

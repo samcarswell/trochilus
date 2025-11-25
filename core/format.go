@@ -4,20 +4,27 @@ import (
 	"time"
 )
 
-func FormatStatus(status RunStatus) string {
+func FormatStatus(status RunStatus, showEmoji bool) string {
 	switch status {
 	case RunStatusSucceeded:
-		return "✅ " + string(status)
+		return formatEmoji("✅", showEmoji) + string(status)
 	case RunStatusFailed:
-		return "❌ " + string(status)
+		return formatEmoji("❌", showEmoji) + string(status)
 	case RunStatusRunning:
-		return "🚀 " + string(status)
+		return formatEmoji("🚀", showEmoji) + string(status)
 	case RunStatusSkipped:
-		return "⚠️ " + string(status)
+		return formatEmoji("⚠️", showEmoji) + string(status)
 	case RunStatusTerminated:
-		return "💥 " + string(status)
+		return formatEmoji("💥", showEmoji) + string(status)
 	}
 	return string(status)
+}
+
+func formatEmoji(emoji string, showEmoji bool) string {
+	if showEmoji {
+		return emoji + " "
+	}
+	return ""
 }
 
 func FormatTime(timeValue time.Time, useLocalTime bool) string {

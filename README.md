@@ -106,6 +106,12 @@ eg. `TROC_DATABASE` or `TROC_NOTIFY_SLACK_TOKEN`.
 | `notify.hostname` | Name of server when pushing notifications. eg. `job-name@hostname` | Output of `hostname`
 | `notify.slack.token` | Token for slack app. | 
 | `notify.slack.channel` | Slack channel to post notifications. | 
+| `display.emoji` | Displays emojis. | `true`
+| `display.color.status.succeeded` | Colours text output for `Succeeded` status. | `false`
+| `display.color.status.failed` | Colours text output for `Failed` status. | `false`
+| `display.color.status.running` | Colours text output for `Running` status. | `false`
+| `display.color.status.skipped` | Colours text output for `Skipped` status. | `false`
+| `display.color.status.terminated` | Colours text output for `Terminated` status. | `false`
 
 Any invocation of `troc` will check for a database located at the `database` config value.
 If it does not exist, it will create it.

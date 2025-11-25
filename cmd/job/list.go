@@ -5,7 +5,7 @@ import (
 	"errors"
 	"log/slog"
 
-	"github.com/rodaine/table"
+	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/samcarswell/trochilus/config"
 	"github.com/samcarswell/trochilus/core"
 	"github.com/spf13/cobra"
@@ -21,12 +21,12 @@ var listCmd = &cobra.Command{
 		if err != nil {
 			core.LogErrorAndExit(slog.Default(), err, errors.New("unable to get jobs"))
 		}
-		tbl := table.New("ID", "Name", "Notify Log Content")
+		t := core.NewTable()
+		t.AppendHeader(table.Row{"ID", "Name", "Notify Log Content"})
 		for _, job := range jobRows {
-			tbl.AddRow(job.Job.ID, job.Job.Name, job.Job.NotifyLogContent)
+			t.AppendRow(table.Row{job.Job.ID, job.Job.Name, job.Job.NotifyLogContent})
 		}
-		tbl.Print()
-
+		t.Render()
 	},
 }
 

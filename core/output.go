@@ -9,6 +9,9 @@ import (
 	"os"
 	"path"
 	"time"
+
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/jedib0t/go-pretty/v6/text"
 )
 
 func SetDefaultSlogLogger(l *slog.Logger) {
@@ -59,4 +62,18 @@ func PrintJson(data any) {
 		LogErrorAndExit(slog.Default(), err)
 	}
 	fmt.Println(string(jsonData))
+}
+
+func NewTable() table.Writer {
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.SetStyle(table.Style{
+		Box: table.BoxStyle{
+			PaddingRight: "  ",
+		},
+		Format: table.FormatOptions{
+			Header: text.FormatDefault,
+		},
+	})
+	return t
 }

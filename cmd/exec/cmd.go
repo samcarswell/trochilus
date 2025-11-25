@@ -131,7 +131,7 @@ func execRun(
 		return skipRun(
 			jobRow.Job,
 			logFile,
-			conf.Notify,
+			conf,
 			db,
 			context.Background(),
 			logger,
@@ -195,7 +195,7 @@ func execRun(
 	if isNotify {
 		logger.Info("Sending notify message")
 		ok, err := notify.NotifyRun(
-			conf.Notify,
+			conf,
 			notify.RunNotifyInfo{
 				Name:             completedRun.Job.Name,
 				Id:               completedRun.Run.ID,
@@ -217,7 +217,7 @@ func execRun(
 func skipRun(
 	job data.Job,
 	execLogFile string,
-	notifyConf config.NotifyConfig,
+	conf config.Config,
 	queries *data.Queries,
 	ctx context.Context,
 	logger *slog.Logger,
@@ -237,7 +237,7 @@ func skipRun(
 	}
 	logger.Warn("Skipping run " + strconv.FormatInt(id, 10) + ". Job is already running.")
 	notify.NotifyRun(
-		notifyConf,
+		conf,
 		notify.RunNotifyInfo{
 			Name:             run.Job.Name,
 			Id:               run.Run.ID,
