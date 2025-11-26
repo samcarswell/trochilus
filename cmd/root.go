@@ -104,9 +104,15 @@ func init() {
 	viper.SetDefault("display.color.status.running", false)
 	viper.SetDefault("display.color.status.skipped", false)
 	viper.SetDefault("display.color.status.terminated", false)
-	viper.AddConfigPath(configPath)
+
+	confPath, ok := os.LookupEnv("TROC_CONFIG_PATH")
+	if !ok {
+		confPath = configPath
+	}
+
+	viper.AddConfigPath(confPath)
 	viper.SetConfigName(configName)
 	viper.SetConfigType(configType)
 	viper.AutomaticEnv()
-	config.CreateAndReadConfig(configPath, configName, configType)
+	config.CreateAndReadConfig(confPath, configName, configType)
 }
