@@ -38,9 +38,8 @@ var showCmd = &cobra.Command{
 			LogFile:       runRow.Run.LogFile,
 			SystemLogFile: runRow.Run.ExecLogFile,
 			Status:        runRow.Run.Status,
-		}
-		if runRow.Run.EndTime.Valid {
-			data.Duration = runRow.Run.EndTime.Time.Sub(runRow.Run.StartTime).String()
+			Pid:           core.FormatPid(runRow.Run.Pid),
+			Duration:      core.FormatDuration(runRow.Run.StartTime, runRow.Run.EndTime.Time),
 		}
 		core.PrintJson(data)
 	},

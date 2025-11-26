@@ -74,9 +74,8 @@ var execCmd = &cobra.Command{
 			LogFile:       completedRun.Run.LogFile,
 			SystemLogFile: completedRun.Run.ExecLogFile,
 			Status:        completedRun.Run.Status,
-		}
-		if completedRun.Run.EndTime.Valid {
-			data.Duration = completedRun.Run.EndTime.Time.Sub(completedRun.Run.StartTime).String()
+			Pid:           core.FormatPid(completedRun.Run.Pid),
+			Duration:      core.FormatDuration(completedRun.Run.StartTime, completedRun.Run.EndTime.Time),
 		}
 		core.PrintJson(data)
 	},
@@ -183,17 +182,38 @@ func execRun(
 		}
 	}()
 
-	err = runCmd.Run()
 	status := core.RunStatusSucceeded
+	err = runCmd.Start()
 	if err != nil {
-		if strings.HasPrefix(err.Error(), "signal: ") {
-			logger.Error("Run has been terminated: " + err.Error())
-			status = core.RunStatusTerminated
-		} else {
-			logger.Error("Error occurred during run", "error", err)
+		logger.Error("Failed to start run: " + err.Error())
+		status = core.RunStatusFailed
+	} else {
+		err := db.UpdateRunPid(ctx, data.UpdateRunPidParams{
+			ID: runId,
+			Pid: sql.NullInt64{
+				Int64: int64(runCmd.Process.Pid),
+				Valid: true,
+			},
+		})
+		if err != nil {
+			sigtermErr := runCmd.Process.Signal(syscall.SIGTERM)
+			if sigtermErr != nil {
+				logger.Error("Failed to send SIGTERM to process.")
+			}
 			status = core.RunStatusFailed
 		}
+		err = runCmd.Wait()
+		if err != nil {
+			if strings.HasPrefix(err.Error(), "signal: ") {
+				logger.Error("Run has been terminated: " + err.Error())
+				status = core.RunStatusTerminated
+			} else {
+				logger.Error("Error occurred during run", "error", err)
+				status = core.RunStatusFailed
+			}
+		}
 	}
+
 	db.EndRun(context.Background(), data.EndRunParams{
 		Status: string(status),
 		ID:     runId,

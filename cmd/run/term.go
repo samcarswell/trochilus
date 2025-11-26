@@ -16,7 +16,7 @@ import (
 
 var termCmd = &cobra.Command{
 	Use:   "term",
-	Short: "Manually terminate a run.",
+	Short: "Manually terminate a run",
 	Long: `
 Manually terminate a run.
 
@@ -68,9 +68,8 @@ This command will fail if the run is in any other state than 'running'.
 			LogFile:       updRunRow.Run.LogFile,
 			SystemLogFile: updRunRow.Run.ExecLogFile,
 			Status:        updRunRow.Run.Status,
-		}
-		if updRunRow.Run.EndTime.Valid {
-			data.Duration = updRunRow.Run.EndTime.Time.Sub(updRunRow.Run.StartTime).String()
+			Duration:      core.FormatDuration(updRunRow.Run.StartTime, updRunRow.Run.EndTime.Time),
+			Pid:           core.FormatPid(updRunRow.Run.Pid),
 		}
 		core.PrintJson(data)
 	},

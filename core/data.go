@@ -19,4 +19,5 @@ type RunShow struct {
 	SystemLogFile string
 	Status        string
 	Duration      string
+	Pid           string
 }

@@ -170,14 +170,30 @@ Use `troc run watch -r [RUN_ID]` to tail the logs of a running job until it comp
 
 `troc run show -r [RUN_ID]`
 
-### Manually terminating a run
+### Kill a run
 
-If a `troc` run process was killed using SIGKILL, it cannot be gracefully handled.
-As a result the run will be left in a `Running` state.
-These can be manually set to `Terminated` using `troc run term -r [RUN_ID]`.
+To kill a run, use `troc run kill -r [RUN_ID]`. This will print the PID of
+the run, and an interactive prompt to confirm killing the PID. 
 
-Note that this will not check if the process is still running, or attempt to terminate it.
-Only run this if you have determined that the run is not running and it's state is still `Running`.
+If you are using the command in an automated way, you can provide the `--force`
+flag.
+
+`troc run kill` will pass the `SIGTERM` down to the executing script, 
+and handle terminating the run by setting it's state to `Terminated`.
+
+#### SIGKILL
+
+If a `troc exec` process was killed using `SIGKILL`, eg. `kill -9 [PID]`,
+it cannot be gracefully handled. The script passed to `troc exec` will be
+left running and the run itself will be left in a `Running` state.
+
+To cleanup the run, you can manually set its state to `Terminated` 
+using `troc run term -r [RUN_ID]`.
+
+Note that `troc run term` will not check if the process is still running, 
+or attempt to terminate it itself.
+Only run this if you have determined that the run is not running and 
+it's state is still `Running`.
 
 If the run is still in progress, and `troc run term` has been ran on it,
 the run will still correctly update it's state once it completes.

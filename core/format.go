@@ -1,6 +1,8 @@
 package core
 
 import (
+	"database/sql"
+	"strconv"
 	"time"
 )
 
@@ -35,4 +37,18 @@ func FormatTime(timeValue time.Time, useLocalTime bool) string {
 		return timeValue.In(time.Local).String()
 	}
 	return timeValue.String()
+}
+
+func FormatPid(value sql.NullInt64) string {
+	if value.Valid {
+		return strconv.FormatInt(value.Int64, 10)
+	}
+	return ""
+}
+
+func FormatDuration(start time.Time, end time.Time) string {
+	if end.IsZero() {
+		return ""
+	}
+	return end.Sub(start).String()
 }

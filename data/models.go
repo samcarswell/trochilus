@@ -23,4 +23,5 @@ type Run struct {
 	LogFile     string
 	ExecLogFile string
 	Status      string
+	Pid         sql.NullInt64
 }
