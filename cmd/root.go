@@ -37,6 +37,7 @@ https://github.com/samcarswell/trochilus
 	},
 }
 
+// Most of this file needs to be moved to config/config.go
 func setupContext(cmd *cobra.Command) {
 	conf := config.GetConfig()
 	err := os.MkdirAll(conf.LogDir, os.ModePerm)
@@ -76,12 +77,13 @@ func Execute(migrations embed.FS) {
 }
 
 func init() {
-	core.SetDefaultSlogLogger(core.GetDefaultTextSlogLogger())
-	logger := slog.Default()
 	RootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
 	viper.SetEnvPrefix("TROC")
 	replacer := strings.NewReplacer(".", "_")
 	viper.SetEnvKeyReplacer(replacer)
+	viper.SetDefault("logjson", getLogType())
+	core.SetDefaultSlogLoggerInit(viper.GetBool("logjson"))
+	logger := slog.Default()
 
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -115,4 +117,12 @@ func init() {
 	viper.SetConfigType(configType)
 	viper.AutomaticEnv()
 	config.CreateAndReadConfig(confPath, configName, configType)
+}
+
+func getLogType() bool {
+	logJson, ok := os.LookupEnv("TROC_LOGJSON")
+	if !ok {
+		return false
+	}
+	return strings.ToLower(logJson) == "true"
 }

@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Handling SIGTERM in `exec` by setting run state to `Terminated`.
 - `run kill` to kill runs with status `Running`.
 - `--format` options for `[run|job] list`.
+- Config value `logjson=true` will output stderr logs in json. Defaults to `false`.
 
 ## [0.2.0] - 2025-11-23
 

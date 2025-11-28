@@ -24,8 +24,13 @@ func GetSlogHandlerOptions() *slog.HandlerOptions {
 	}
 }
 
-func GetDefaultTextSlogLogger() *slog.Logger {
-	return slog.New(slog.NewTextHandler(os.Stderr, GetSlogHandlerOptions()))
+func SetDefaultSlogLoggerInit(logJson bool) {
+	opts := GetSlogHandlerOptions()
+	if !logJson {
+		slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, opts)))
+	} else {
+		slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, opts)))
+	}
 }
 
 func LogErrorAndExit(logger *slog.Logger, errs ...error) {
