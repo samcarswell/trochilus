@@ -11,13 +11,19 @@ const (
 )
 
 type RunShow struct {
-	ID            int64
-	JobName       string
-	StartTime     string
-	EndTime       string
-	LogFile       string
-	SystemLogFile string
-	Status        string
-	Duration      string
-	Pid           string
+	ID            int64  `json:"id"`
+	JobName       string `json:"job_name"`
+	StartTime     string `json:"start_time"`
+	EndTime       string `json:"end_time"`
+	LogFile       string `json:"log_file"`
+	SystemLogFile string `json:"system_log_file"`
+	Status        string `json:"status"`
+	Duration      string `json:"duration"`
+	Pid           string `json:"pid"`
+}
+
+type JobShow struct {
+	ID               int64  `json:"id"`
+	Name             string `json:"name"`
+	NotifyLogContent bool   `json:"notify_log_content"`
 }

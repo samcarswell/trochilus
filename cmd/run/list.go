@@ -16,10 +16,14 @@ import (
 
 var nameOpt = "name"
 var statusField = "Status"
+var format string
 
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "Lists runs",
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		return opts.FormatTableOptValidate(cmd, format)
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		logger := slog.Default()
 		conf := config.GetConfig()
@@ -41,8 +45,24 @@ var listCmd = &cobra.Command{
 		if err != nil {
 			core.LogErrorAndExit(slog.Default(), err)
 		}
-		t := core.NewTable()
-		t.AppendHeader(table.Row{
+		var rows = []core.RunShow{}
+
+		for _, runRow := range runRows {
+			data := core.RunShow{
+				ID:            runRow.Run.ID,
+				JobName:       runRow.Job.Name,
+				StartTime:     core.FormatTime(runRow.Run.StartTime, conf.LocalTime),
+				EndTime:       core.FormatTime(runRow.Run.EndTime.Time, conf.LocalTime),
+				LogFile:       runRow.Run.LogFile,
+				SystemLogFile: runRow.Run.ExecLogFile,
+				Status:        runRow.Run.Status,
+				Pid:           core.FormatPid(runRow.Run.Pid),
+				Duration:      core.FormatDuration(runRow.Run.StartTime, runRow.Run.EndTime.Time),
+			}
+			rows = append(rows, data)
+		}
+
+		t := core.NewTable(rows, rowConv(conf), []string{
 			"ID",
 			"Job Name",
 			"Start Time",
@@ -51,19 +71,7 @@ var listCmd = &cobra.Command{
 			"Exec Log File",
 			statusField,
 		})
-		for _, run := range runRows {
-			t.AppendRow(table.Row{
-				run.Run.ID,
-				run.Job.Name,
-				core.FormatTime(run.Run.StartTime, conf.LocalTime),
-				core.FormatTime(run.Run.EndTime.Time, conf.LocalTime),
-				run.Run.LogFile,
-				run.Run.ExecLogFile,
-				core.FormatStatus(core.RunStatus(run.Run.Status), conf.Display.Emoji),
-			})
-		}
-
-		statusTransformer := text.Transformer(func(val interface{}) string {
+		statusTransformer := text.Transformer(func(val any) string {
 			if status, ok := val.(string); ok {
 				color := text.FgWhite
 				switch status {
@@ -93,20 +101,39 @@ var listCmd = &cobra.Command{
 			return fmt.Sprint(val)
 		})
 
-		t.SetColumnConfigs([]table.ColumnConfig{
+		t.Table.SetColumnConfigs([]table.ColumnConfig{
 			{
 				Name:        statusField,
 				Transformer: statusTransformer,
 			},
 		})
-
-		t.Render()
-
+		t.Print(core.OutputFormat(format))
 	},
+}
+
+func rowConv(conf config.Config) func(core.RunShow, core.OutputFormat) table.Row {
+	return func(row core.RunShow, format core.OutputFormat) table.Row {
+		var status string
+		if format == core.FormatPretty {
+			status = core.FormatStatus(core.RunStatus(row.Status), conf.Display.Emoji)
+		} else {
+			status = row.Status
+		}
+		return table.Row{
+			row.ID,
+			row.JobName,
+			row.StartTime,
+			row.EndTime,
+			row.LogFile,
+			row.SystemLogFile,
+			status,
+		}
+	}
 }
 
 func init() {
 	RunCmd.AddCommand(listCmd)
 
 	listCmd.Flags().String(nameOpt, "", "Name of job to filter on")
+	opts.FormatTableOpt(listCmd, &format)
 }

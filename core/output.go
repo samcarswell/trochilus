@@ -64,7 +64,17 @@ func PrintJson(data any) {
 	fmt.Println(string(jsonData))
 }
 
-func NewTable() table.Writer {
+type OutputTable[T any] struct {
+	Table   table.Writer
+	Rows    []T
+	ConvRow func(T, OutputFormat) table.Row
+}
+
+func NewTable[T any](
+	rows []T,
+	convRow func(T, OutputFormat) table.Row,
+	headers []string,
+) OutputTable[T] {
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
 	t.SetStyle(table.Style{
@@ -75,5 +85,44 @@ func NewTable() table.Writer {
 			Header: text.FormatDefault,
 		},
 	})
-	return t
+	var row = table.Row{}
+	for _, header := range headers {
+		row = append(row, header)
+	}
+	t.AppendHeader(row)
+	return OutputTable[T]{
+		Table:   t,
+		Rows:    rows,
+		ConvRow: convRow,
+	}
 }
+
+func (t OutputTable[T]) Print(format OutputFormat) {
+	if format == FormatJson {
+		PrintJson(t.Rows)
+	} else {
+		for _, row := range t.Rows {
+			t.Table.AppendRow(t.ConvRow(row, format))
+		}
+		switch format {
+		case FormatPretty:
+			t.Table.Render()
+		case FormatHtml:
+			t.Table.RenderHTML()
+		case FormatCsv:
+			t.Table.RenderCSV()
+		case FormatTsv:
+			t.Table.RenderTSV()
+		}
+	}
+}
+
+type OutputFormat string
+
+const (
+	FormatPretty OutputFormat = "pretty"
+	FormatJson   OutputFormat = "json"
+	FormatCsv    OutputFormat = "csv"
+	FormatTsv    OutputFormat = "tsv"
+	FormatHtml   OutputFormat = "html"
+)
