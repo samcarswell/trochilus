@@ -144,6 +144,7 @@ const EventRunCreated Event = "run-created"
 const EventRunCompleted Event = "run-completed"
 const EventRunStarted Event = "run-started"
 const EventRunTerminated Event = "run-terminated"
+const EventRunManuallyTerminated Event = "run-terminated"
 const EventRunSigterm Event = "run-sigterm"
 const EventRunSkipped Event = "run-skipped"
 
@@ -234,6 +235,19 @@ func LogRunTerminated(
 	logger.Error(
 		"Run has been terminated: "+signalErr,
 		LogEvent(EventRunTerminated),
+		LogRunId(runId),
+		LogJobName(jobName),
+	)
+}
+
+func LogRunManuallyTerminated(
+	logger *slog.Logger,
+	runId int64,
+	jobName string,
+) {
+	logger.Info(
+		"Run has been manually terminated",
+		LogEvent(EventRunManuallyTerminated),
 		LogRunId(runId),
 		LogJobName(jobName),
 	)

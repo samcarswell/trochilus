@@ -41,7 +41,7 @@ func TestMain(m *testing.M) {
 	os.Exit(exitVal)
 }
 
-func TestVersion(t *testing.T) {
+func Test_Version(t *testing.T) {
 	cli := test.NewTrocCli(t, trocExe)
 	cmd := cli.Base.Version()
 	cmd.Run()
@@ -52,7 +52,7 @@ func TestVersion(t *testing.T) {
 	}
 }
 
-func TestFirstRunDefaultSettings(t *testing.T) {
+func Test_FirstRunDefaultSettings(t *testing.T) {
 	cli := test.NewTrocCli(t, trocExe)
 	exec := cli.Base.Exec("first-job", "echo 'Hello!'")
 	exec.Run()
@@ -74,7 +74,7 @@ func TestFirstRunDefaultSettings(t *testing.T) {
 	assert.NotEqual(t, "", runInfo.EndTime)
 }
 
-func TestKill(t *testing.T) {
+func Test_Kill(t *testing.T) {
 	cli := test.NewTrocCli(t, trocExe)
 	killedRunCmd := cli.Base.Exec("first-job", "echo 'Started'; sleep 60; echo 'Finished'")
 	killedRunCmd.Start()

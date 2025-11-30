@@ -53,7 +53,7 @@ This command will fail if the run is in any other state than 'running'.
 			core.LogErrorAndExit(logger, err)
 		}
 
-		logger.Info("Manually failed run " + strconv.FormatInt(runId, 10))
+		core.LogRunManuallyTerminated(logger, runId, runRow.Job.Name)
 
 		updRunRow, err := queries.GetRun(context.Background(), runId)
 		if err != nil {
