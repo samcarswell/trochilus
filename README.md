@@ -24,10 +24,10 @@ Named after the legendary bird described by Herodotus in [The Histories](https:/
 
 ## Build
 
-Checkout the relevant release tag. eg. `0.2.0`; you can build on any commit but there might be issues.
+Checkout the relevant release tag. eg. `0.3.0`; you can build on any commit but there might be issues.
 
 ```bash
-git checkout 0.2.0
+git checkout 0.3.0
 ./build
 ```
 
@@ -99,11 +99,12 @@ eg. `TROC_DATABASE` or `TROC_NOTIFY_SLACK_TOKEN`.
 
 | Name | Description | Default |
 | - | - | - |
-| `database` | Path to the sqlite database. | `~/.config/troc/troc.db`
-| `localtime` | Display dates in local time rather than UTC. | `true`
-| `lockdir` | Directory of job lock files. | `$TMPDIR` if not empty, otherwise `/tmp`
-| `logdir` | Directory of job log files. | `$TMPDIR` if not empty, otherwise `/tmp`
-| `notify.hostname` | Name of server when pushing notifications. eg. `job-name@hostname` | Output of `hostname`
+| `database` | Path to the sqlite database. | `~/.config/troc/troc.db` |
+| `localtime` | Display dates in local time rather than UTC. | `true` |
+| `lockdir` | Directory of job lock files. | `$TMPDIR` if not empty, otherwise `/tmp` |
+| `logdir` | Directory of job log files. | `$TMPDIR` if not empty, otherwise `/tmp` |
+| `logjson` | Output stderr system logs in json format. Note: if defined in `$HOME/.config/troc/config.yaml` this will only take affect after configuration has been loaded. Any logging that occurs before this, such as startup failures, will be in text format. If you are running `troc` in an automated fashion and are relying on stderr system logs being in a json format, ensure that the env var `TROC_LOGJSON=true` is set; this will affect log format immediately. | `false` |
+| `notify.hostname` | Name of server when pushing notifications. eg. `job-name@hostname` | Output of `hostname` |
 | `notify.slack.token` | Token for slack app. | 
 | `notify.slack.channel` | Slack channel to post notifications. | 
 | `display.emoji` | Displays emojis. | `true`
