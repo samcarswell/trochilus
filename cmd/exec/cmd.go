@@ -13,7 +13,8 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"strconv"
+	"strings"
+	"syscall"
 
 	"github.com/gofrs/flock"
 	"github.com/samcarswell/trochilus/cmd"
@@ -72,9 +73,8 @@ var execCmd = &cobra.Command{
 			LogFile:       completedRun.Run.LogFile,
 			SystemLogFile: completedRun.Run.ExecLogFile,
 			Status:        completedRun.Run.Status,
-		}
-		if completedRun.Run.EndTime.Valid {
-			data.Duration = completedRun.Run.EndTime.Time.Sub(completedRun.Run.StartTime).String()
+			Pid:           core.FormatPid(completedRun.Run.Pid),
+			Duration:      core.FormatDuration(completedRun.Run.StartTime, completedRun.Run.EndTime.Time),
 		}
 		core.PrintJson(data)
 	},
@@ -100,8 +100,6 @@ func execRun(
 	logFile string,
 	args []string,
 ) data.GetRunRow {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
 	jobRow, err := db.GetJob(ctx, jobName)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -131,7 +129,7 @@ func execRun(
 		return skipRun(
 			jobRow.Job,
 			logFile,
-			conf.Notify,
+			conf,
 			db,
 			context.Background(),
 			logger,
@@ -162,30 +160,64 @@ func execRun(
 	if err != nil {
 		core.LogErrorAndExit(logger, err, errors.New("unable to start run"))
 	}
-
-	logger.Info("Run created with ID " + strconv.FormatInt(runId, 10))
+	core.LogRunCreated(logger, runId, jobName)
 
 	cmdArgs := []string{"-c"}
 	cmdArgs = append(cmdArgs, args[0])
 	runCmd := exec.Command("/bin/sh", cmdArgs...)
 	runCmd.Stdout = stdoutLog
 	runCmd.Stderr = stdoutLog
-	err = runCmd.Run()
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		sig := <-c
+		if sig == syscall.SIGTERM {
+			err := runCmd.Process.Signal(syscall.SIGTERM)
+			if err != nil {
+				logger.Error("Failed to send SIGTERM to run.")
+			}
+		}
+	}()
+
 	status := core.RunStatusSucceeded
+	err = runCmd.Start()
 	if err != nil {
-		if err.Error() == "signal: interrupt" {
-			logger.Error("Run has been interrupted")
-			status = core.RunStatusTerminated
-		} else {
-			logger.Error("Error occurred during run", "error", err)
+		logger.Error("Failed to start run: " + err.Error())
+		status = core.RunStatusFailed
+	} else {
+		core.LogRunStarted(logger, runId, jobName, runCmd.Process.Pid)
+		err := db.UpdateRunPid(ctx, data.UpdateRunPidParams{
+			ID: runId,
+			Pid: sql.NullInt64{
+				Int64: int64(runCmd.Process.Pid),
+				Valid: true,
+			},
+		})
+		if err != nil {
+			sigtermErr := runCmd.Process.Signal(syscall.SIGTERM)
+			if sigtermErr != nil {
+				logger.Error("Failed to send SIGTERM to process.")
+			}
 			status = core.RunStatusFailed
 		}
+		err = runCmd.Wait()
+		if err != nil {
+			if strings.HasPrefix(err.Error(), "signal: ") {
+				core.LogRunTerminated(logger, runId, jobName, err.Error())
+				status = core.RunStatusTerminated
+			} else {
+				logger.Error("Error occurred during run", "error", err)
+				status = core.RunStatusFailed
+			}
+		}
 	}
+
 	db.EndRun(context.Background(), data.EndRunParams{
 		Status: string(status),
 		ID:     runId,
 	})
-	logger.Info("Run " + strconv.FormatInt(runId, 10) + " completed: " + string(status))
+	core.LogRunCompleted(logger, runId, jobName, status)
 
 	completedRun, err := db.GetRun(ctx, runId)
 	if err != nil {
@@ -195,7 +227,7 @@ func execRun(
 	if isNotify {
 		logger.Info("Sending notify message")
 		ok, err := notify.NotifyRun(
-			conf.Notify,
+			conf,
 			notify.RunNotifyInfo{
 				Name:             completedRun.Job.Name,
 				Id:               completedRun.Run.ID,
@@ -217,7 +249,7 @@ func execRun(
 func skipRun(
 	job data.Job,
 	execLogFile string,
-	notifyConf config.NotifyConfig,
+	conf config.Config,
 	queries *data.Queries,
 	ctx context.Context,
 	logger *slog.Logger,
@@ -235,9 +267,9 @@ func skipRun(
 		// TODO: need a standard function here to deal with errors and communicate to slack
 		core.LogErrorAndExit(logger, err, errors.New("unable to get updated run"))
 	}
-	logger.Warn("Skipping run " + strconv.FormatInt(id, 10) + ". Job is already running.")
+	core.LogRunSkipped(logger, id, job.Name)
 	notify.NotifyRun(
-		notifyConf,
+		conf,
 		notify.RunNotifyInfo{
 			Name:             run.Job.Name,
 			Id:               run.Run.ID,

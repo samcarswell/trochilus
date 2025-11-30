@@ -5,15 +5,21 @@ import (
 	"errors"
 	"log/slog"
 
-	"github.com/rodaine/table"
+	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/samcarswell/trochilus/config"
 	"github.com/samcarswell/trochilus/core"
+	"github.com/samcarswell/trochilus/opts"
 	"github.com/spf13/cobra"
 )
+
+var format string
 
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List jobs",
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		return opts.FormatTableOptValidate(cmd, format)
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		queries := config.GetDatabase(cmd.Context())
 
@@ -21,15 +27,31 @@ var listCmd = &cobra.Command{
 		if err != nil {
 			core.LogErrorAndExit(slog.Default(), err, errors.New("unable to get jobs"))
 		}
-		tbl := table.New("ID", "Name", "Notify Log Content")
+		var rows = []core.JobShow{}
 		for _, job := range jobRows {
-			tbl.AddRow(job.Job.ID, job.Job.Name, job.Job.NotifyLogContent)
+			rows = append(rows, core.JobShow{
+				ID:               job.Job.ID,
+				Name:             job.Job.Name,
+				NotifyLogContent: job.Job.NotifyLogContent,
+			})
 		}
-		tbl.Print()
 
+		t := core.NewTable(rows, rowConv, []string{
+			"ID", "Name", "Notify Log Content",
+		})
+		t.Print(core.OutputFormat(format))
 	},
+}
+
+func rowConv(row core.JobShow, _ core.OutputFormat) table.Row {
+	return table.Row{
+		row.ID,
+		row.Name,
+		row.NotifyLogContent,
+	}
 }
 
 func init() {
 	JobCmd.AddCommand(listCmd)
+	opts.FormatTableOpt(listCmd, &format)
 }

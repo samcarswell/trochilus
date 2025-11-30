@@ -37,6 +37,7 @@ https://github.com/samcarswell/trochilus
 	},
 }
 
+// Most of this file needs to be moved to config/config.go
 func setupContext(cmd *cobra.Command) {
 	conf := config.GetConfig()
 	err := os.MkdirAll(conf.LogDir, os.ModePerm)
@@ -76,12 +77,13 @@ func Execute(migrations embed.FS) {
 }
 
 func init() {
-	core.SetDefaultSlogLogger(core.GetDefaultTextSlogLogger())
-	logger := slog.Default()
 	RootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
 	viper.SetEnvPrefix("TROC")
 	replacer := strings.NewReplacer(".", "_")
 	viper.SetEnvKeyReplacer(replacer)
+	viper.SetDefault("logjson", getLogType())
+	core.SetDefaultSlogLoggerInit(viper.GetBool("logjson"))
+	logger := slog.Default()
 
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -98,9 +100,29 @@ func init() {
 	viper.SetDefault("lockdir", os.TempDir())
 	viper.SetDefault("notify.hostname", hostname)
 	viper.SetDefault("localtime", true)
-	viper.AddConfigPath(configPath)
+	viper.SetDefault("display.emoji", true)
+	viper.SetDefault("display.color.status.succeeded", false)
+	viper.SetDefault("display.color.status.failed", false)
+	viper.SetDefault("display.color.status.running", false)
+	viper.SetDefault("display.color.status.skipped", false)
+	viper.SetDefault("display.color.status.terminated", false)
+
+	confPath, ok := os.LookupEnv("TROC_CONFIG_PATH")
+	if !ok {
+		confPath = configPath
+	}
+
+	viper.AddConfigPath(confPath)
 	viper.SetConfigName(configName)
 	viper.SetConfigType(configType)
 	viper.AutomaticEnv()
-	config.CreateAndReadConfig(configPath, configName, configType)
+	config.CreateAndReadConfig(confPath, configName, configType)
+}
+
+func getLogType() bool {
+	logJson, ok := os.LookupEnv("TROC_LOGJSON")
+	if !ok {
+		return false
+	}
+	return strings.ToLower(logJson) == "true"
 }

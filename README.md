@@ -24,10 +24,10 @@ Named after the legendary bird described by Herodotus in [The Histories](https:/
 
 ## Build
 
-Checkout the relevant release tag. eg. `0.2.0`; you can build on any commit but there might be issues.
+Checkout the relevant release tag. eg. `0.3.0`; you can build on any commit but there might be issues.
 
 ```bash
-git checkout 0.2.0
+git checkout 0.3.0
 ./build
 ```
 
@@ -99,13 +99,20 @@ eg. `TROC_DATABASE` or `TROC_NOTIFY_SLACK_TOKEN`.
 
 | Name | Description | Default |
 | - | - | - |
-| `database` | Path to the sqlite database. | `~/.config/troc/troc.db`
-| `localtime` | Display dates in local time rather than UTC. | `true`
-| `lockdir` | Directory of job lock files. | `$TMPDIR` if not empty, otherwise `/tmp`
-| `logdir` | Directory of job log files. | `$TMPDIR` if not empty, otherwise `/tmp`
-| `notify.hostname` | Name of server when pushing notifications. eg. `job-name@hostname` | Output of `hostname`
+| `database` | Path to the sqlite database. | `~/.config/troc/troc.db` |
+| `localtime` | Display dates in local time rather than UTC. | `true` |
+| `lockdir` | Directory of job lock files. | `$TMPDIR` if not empty, otherwise `/tmp` |
+| `logdir` | Directory of job log files. | `$TMPDIR` if not empty, otherwise `/tmp` |
+| `logjson` | Output stderr system logs in json format. Note: if defined in `$HOME/.config/troc/config.yaml` this will only take affect after configuration has been loaded. Any logging that occurs before this, such as startup failures, will be in text format. If you are running `troc` in an automated fashion and are relying on stderr system logs being in a json format, ensure that the env var `TROC_LOGJSON=true` is set; this will affect log format immediately. | `false` |
+| `notify.hostname` | Name of server when pushing notifications. eg. `job-name@hostname` | Output of `hostname` |
 | `notify.slack.token` | Token for slack app. | 
 | `notify.slack.channel` | Slack channel to post notifications. | 
+| `display.emoji` | Displays emojis. | `true`
+| `display.color.status.succeeded` | Colours text output for `Succeeded` status. | `false`
+| `display.color.status.failed` | Colours text output for `Failed` status. | `false`
+| `display.color.status.running` | Colours text output for `Running` status. | `false`
+| `display.color.status.skipped` | Colours text output for `Skipped` status. | `false`
+| `display.color.status.terminated` | Colours text output for `Terminated` status. | `false`
 
 Any invocation of `troc` will check for a database located at the `database` config value.
 If it does not exist, it will create it.
@@ -164,14 +171,30 @@ Use `troc run watch -r [RUN_ID]` to tail the logs of a running job until it comp
 
 `troc run show -r [RUN_ID]`
 
-### Manually terminating a run
+### Kill a run
 
-If a `troc` run process was killed using SIGKILL, it cannot be gracefully handled.
-As a result the run will be left in a `Running` state.
-These can be manually set to `Terminated` using `troc run term -r [RUN_ID]`.
+To kill a run, use `troc run kill -r [RUN_ID]`. This will print the PID of
+the run, and an interactive prompt to confirm killing the PID. 
 
-Note that this will not check if the process is still running, or attempt to terminate it.
-Only run this if you have determined that the run is not running and it's state is still `Running`.
+If you are using the command in an automated way, you can provide the `--force`
+flag.
+
+`troc run kill` will pass the `SIGTERM` down to the executing script, 
+and handle terminating the run by setting it's state to `Terminated`.
+
+#### SIGKILL
+
+If a `troc exec` process was killed using `SIGKILL`, eg. `kill -9 [PID]`,
+it cannot be gracefully handled. The script passed to `troc exec` will be
+left running and the run itself will be left in a `Running` state.
+
+To cleanup the run, you can manually set its state to `Terminated` 
+using `troc run term -r [RUN_ID]`.
+
+Note that `troc run term` will not check if the process is still running, 
+or attempt to terminate it itself.
+Only run this if you have determined that the run is not running and 
+it's state is still `Running`.
 
 If the run is still in progress, and `troc run term` has been ran on it,
 the run will still correctly update it's state once it completes.
@@ -200,7 +223,7 @@ PATH=$PATH:/usr/local/bin:/usr/bin # Ensuring that troc and rsync is in the path
 | `Skipped` | The run was skipped as there is already another run of the same job in progress. |
 | `Succeeded` | The run completed with an exit code == 0. |
 | `Failed` | The run completed with an exit code != 0. |
-| `Terminated` | The run was interrupted. |
+| `Terminated` | The run received a `SIGINT` or `SIGTERM`. |
 
 
 ## Troubleshooting

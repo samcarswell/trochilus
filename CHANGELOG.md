@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-11-30
+
+### Added
+
+- Displaying of emojis using config value `display.emoji`. Defaults to `true`.
+- Colour run status output using config value `display.color.status.[succeeded|failed|running|skipped|terminated]`. Defaults to `false`.
+- Handling SIGTERM in `exec` by setting run state to `Terminated`.
+- `run kill` to kill runs with status `Running`.
+- `--format` options for `[run|job] list`.
+- Config value `logjson=true` will output stderr logs in json. Defaults to `false`.
+
 ## [0.2.0] - 2025-11-23
 
 ### Added

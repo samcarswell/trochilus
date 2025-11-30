@@ -33,11 +33,11 @@ type RunNotifyInfo struct {
 const slackPostMessage = "https://slack.com/api/chat.postMessage"
 
 func NotifyRun(
-	notifyConf config.NotifyConfig,
+	conf config.Config,
 	run RunNotifyInfo,
 ) (bool, error) {
-	slackStr := getNotifyText(run, notifyConf.Hostname)
-	return notifySlack(notifyConf.Slack, slackStr)
+	slackStr := getNotifyText(run, conf.Notify.Hostname, conf.Display.Emoji)
+	return notifySlack(conf.Notify.Slack, slackStr)
 }
 
 // Returns the notification test for a run.
@@ -46,10 +46,11 @@ func NotifyRun(
 func getNotifyText(
 	run RunNotifyInfo,
 	hostname string,
+	showEmoji bool,
 ) string {
 	return "*" + run.Name + hostnameIfExists(hostname) + "*: run " +
 		strconv.FormatInt(run.Id, 10) + " - " +
-		core.FormatStatus(run.Status) +
+		core.FormatStatus(run.Status, showEmoji) +
 		tagChannelIfFail(run.Status) +
 		logFileAndOutput(run.NotifyLogContent, run.LogFile)
 }

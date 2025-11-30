@@ -58,3 +58,7 @@ update jobs
 set name = ?2, notify_log_content = ?3
 where id == ?1;
 
+-- name: UpdateRunPid :exec
+update runs
+set pid = ?2
+where id == ?1;

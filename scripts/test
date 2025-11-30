@@ -1,0 +1,6 @@
+#!/bin/bash
+# -count=1 is used here to disable caching. We need to disable caching
+# as we have e2e tests that rely on building an executable, and testing that.
+# With caching enabled, these tests would not rerun after making changes to the
+# codebase.
+go test ./... -count=1 "$@"

@@ -7,6 +7,7 @@ package data
 
 import (
 	"context"
+	"database/sql"
 )
 
 const createJob = `-- name: CreateJob :one
@@ -97,7 +98,7 @@ func (q *Queries) GetJobs(ctx context.Context) ([]GetJobsRow, error) {
 
 const getRun = `-- name: GetRun :one
 select
-    runs.id, runs.job_id, runs.start_time, runs.end_time, runs.log_file, runs.exec_log_file, runs.status,
+    runs.id, runs.job_id, runs.start_time, runs.end_time, runs.log_file, runs.exec_log_file, runs.status, runs.pid,
     jobs.id, jobs.name, jobs.notify_log_content
 from runs, jobs
 where runs.job_id = jobs.id
@@ -120,6 +121,7 @@ func (q *Queries) GetRun(ctx context.Context, id int64) (GetRunRow, error) {
 		&i.Run.LogFile,
 		&i.Run.ExecLogFile,
 		&i.Run.Status,
+		&i.Run.Pid,
 		&i.Job.ID,
 		&i.Job.Name,
 		&i.Job.NotifyLogContent,
@@ -129,7 +131,7 @@ func (q *Queries) GetRun(ctx context.Context, id int64) (GetRunRow, error) {
 
 const getRuns = `-- name: GetRuns :many
 select
-    runs.id, runs.job_id, runs.start_time, runs.end_time, runs.log_file, runs.exec_log_file, runs.status,
+    runs.id, runs.job_id, runs.start_time, runs.end_time, runs.log_file, runs.exec_log_file, runs.status, runs.pid,
     jobs.id, jobs.name, jobs.notify_log_content
 from runs, jobs
 where runs.job_id = jobs.id
@@ -158,6 +160,7 @@ func (q *Queries) GetRuns(ctx context.Context, dollar_1 interface{}) ([]GetRunsR
 			&i.Run.LogFile,
 			&i.Run.ExecLogFile,
 			&i.Run.Status,
+			&i.Run.Pid,
 			&i.Job.ID,
 			&i.Job.Name,
 			&i.Job.NotifyLogContent,
@@ -241,5 +244,21 @@ type UpdateJobParams struct {
 
 func (q *Queries) UpdateJob(ctx context.Context, arg UpdateJobParams) error {
 	_, err := q.db.ExecContext(ctx, updateJob, arg.ID, arg.Name, arg.NotifyLogContent)
+	return err
+}
+
+const updateRunPid = `-- name: UpdateRunPid :exec
+update runs
+set pid = ?2
+where id == ?1
+`
+
+type UpdateRunPidParams struct {
+	ID  int64
+	Pid sql.NullInt64
+}
+
+func (q *Queries) UpdateRunPid(ctx context.Context, arg UpdateRunPidParams) error {
+	_, err := q.db.ExecContext(ctx, updateRunPid, arg.ID, arg.Pid)
 	return err
 }

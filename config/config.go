@@ -161,12 +161,30 @@ type SlackConfig struct {
 	Channel string
 }
 
+type ColorStatusConfig struct {
+	Succeeded  bool
+	Failed     bool
+	Running    bool
+	Skipped    bool
+	Terminated bool
+}
+
+type ColorConfig struct {
+	Status ColorStatusConfig
+}
+
+type DisplayConfig struct {
+	Emoji bool
+	Color ColorConfig
+}
+
 type Config struct {
 	Database  string
 	LockDir   string
 	LogDir    string
 	Notify    NotifyConfig
 	LocalTime bool
+	Display   DisplayConfig
 }
 
 func GetConfig() Config {
@@ -180,6 +198,18 @@ func GetConfig() Config {
 			Slack: SlackConfig{
 				Token:   viper.GetString("notify.slack.token"),
 				Channel: viper.GetString("notify.slack.channel"),
+			},
+		},
+		Display: DisplayConfig{
+			Emoji: viper.GetBool("display.emoji"),
+			Color: ColorConfig{
+				Status: ColorStatusConfig{
+					Succeeded:  viper.GetBool("display.color.status.succeeded"),
+					Failed:     viper.GetBool("display.color.status.failed"),
+					Running:    viper.GetBool("display.color.status.running"),
+					Skipped:    viper.GetBool("display.color.status.skipped"),
+					Terminated: viper.GetBool("display.color.status.terminated"),
+				},
 			},
 		},
 	}
