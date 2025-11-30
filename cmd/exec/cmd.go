@@ -13,7 +13,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"syscall"
 
@@ -268,7 +267,7 @@ func skipRun(
 		// TODO: need a standard function here to deal with errors and communicate to slack
 		core.LogErrorAndExit(logger, err, errors.New("unable to get updated run"))
 	}
-	logger.Warn("Skipping run " + strconv.FormatInt(id, 10) + ". Job is already running.")
+	core.LogRunSkipped(logger, id, job.Name)
 	notify.NotifyRun(
 		conf,
 		notify.RunNotifyInfo{

@@ -145,6 +145,7 @@ const EventRunCompleted Event = "run-completed"
 const EventRunStarted Event = "run-started"
 const EventRunTerminated Event = "run-terminated"
 const EventRunSigterm Event = "run-sigterm"
+const EventRunSkipped Event = "run-skipped"
 
 func LogRunId(runId int64) slog.Attr {
 	return slog.Int64(RunAttr, runId)
@@ -233,6 +234,19 @@ func LogRunTerminated(
 	logger.Error(
 		"Run has been terminated: "+signalErr,
 		LogEvent(EventRunTerminated),
+		LogRunId(runId),
+		LogJobName(jobName),
+	)
+}
+
+func LogRunSkipped(
+	logger *slog.Logger,
+	runId int64,
+	jobName string,
+) {
+	logger.Warn(
+		"Run has been skipped. Job is already running.",
+		LogEvent(EventRunSkipped),
 		LogRunId(runId),
 		LogJobName(jobName),
 	)

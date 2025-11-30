@@ -3,4 +3,4 @@
 # as we have e2e tests that rely on building an executable, and testing that.
 # With caching enabled, these tests would not rerun after making changes to the
 # codebase.
-go test ./cmd/cmd_test.go -v -count=1
+go test ./... -count=1 "$@"

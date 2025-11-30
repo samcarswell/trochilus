@@ -7,10 +7,13 @@ import (
 	"time"
 
 	"github.com/samcarswell/trochilus/config"
+	"github.com/samcarswell/trochilus/core"
 	"github.com/samcarswell/trochilus/data"
 	"github.com/samcarswell/trochilus/test"
+	"github.com/stretchr/testify/assert"
 )
 
+// TODO: move these tests to e2e tests in /cmd/cmd_test.go
 func Test_execRunNonExistentJob(t *testing.T) {
 	ctx := context.Background()
 	db := test.CreateDb(ctx, t)
@@ -39,31 +42,34 @@ func Test_execRunNonExistentJob(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	test.AssertString(t, jobName, run.Job.Name)
-	test.AssertBool(t, false, run.Job.NotifyLogContent)
+	execLog := test.NewLogFromFileOrFail(run.Run.ExecLogFile)
+	assert.Equal(t, jobName, run.Job.Name)
+	assert.Equal(t, false, run.Job.NotifyLogContent)
 	test.AssertFileExists(t, run.Run.ExecLogFile)
 	test.AssertFileExists(t, run.Run.LogFile)
-	test.AssertString(t, "Succeeded", run.Run.Status)
+	assert.Equal(t, "Succeeded", run.Run.Status)
 	test.AssertFileContents(t, "Output line 1\nOutput line 2\n", run.Run.LogFile)
-	test.AssertLogHasInfo(t, "Job not registered. Creating new job with name "+jobName, run.Run.ExecLogFile)
-	test.AssertLogHasInfo(t, "Run log created at: "+run.Run.LogFile, run.Run.ExecLogFile)
-	test.AssertLogHasInfo(t, "Run created with ID 1", run.Run.ExecLogFile)
-	test.AssertLogHasInfo(t, "Run 1 completed: Succeeded", run.Run.ExecLogFile)
-	test.AssertLogDoesNotHaveInfo(t, "Sending notify message", run.Run.ExecLogFile)
+	test.AssertLogHasInfo(t, "Job not registered. Creating new job with name "+jobName, execLog)
+	test.AssertLogHasInfo(t, "Run log created at: "+run.Run.LogFile, execLog)
+	runCreated := test.GetEventOrFail(t, core.EventRunCreated, execLog)
+	assert.Equal(t, int64(1), runCreated.RunId)
+	runCompleted := test.GetEventOrFail(t, core.EventRunCompleted, execLog)
+	assert.Equal(t, string(core.RunStatusSucceeded), runCompleted.RunStatus)
+	test.AssertLogDoesNotHaveInfo(t, "Sending notify message", execLog)
 	test.AssertFileInDirectory(t, conf.LogDir, run.Run.LogFile)
-	lockRow := test.GetInfoLogLineStartingWith(t, "Created job lock at ", run.Run.ExecLogFile)
+	lockRow := test.GetInfoLogLineStartingWith(t, "Created job lock at ", execLog)
 	lockFile := strings.Split(lockRow.Msg, "Created job lock at ")[1]
 	test.AssertFileInDirectory(t, conf.LockDir, lockFile)
 
-	test.AssertInt(t, 1, dbJob.Job.ID)
-	test.AssertBool(t, false, dbJob.Job.NotifyLogContent)
-	test.AssertString(t, jobName, dbJob.Job.Name)
+	assert.Equal(t, int64(1), dbJob.Job.ID)
+	assert.Equal(t, false, dbJob.Job.NotifyLogContent)
+	assert.Equal(t, jobName, dbJob.Job.Name)
 
-	test.AssertInt(t, 1, dbRun.Run.ID)
-	test.AssertInt(t, 1, dbRun.Run.JobID)
-	test.AssertString(t, "Succeeded", dbRun.Run.Status)
-	test.AssertString(t, run.Run.LogFile, dbRun.Run.LogFile)
-	test.AssertString(t, run.Run.ExecLogFile, dbRun.Run.ExecLogFile)
+	assert.Equal(t, int64(1), dbRun.Run.ID)
+	assert.Equal(t, int64(1), dbRun.Run.JobID)
+	assert.Equal(t, "Succeeded", dbRun.Run.Status)
+	assert.Equal(t, run.Run.LogFile, dbRun.Run.LogFile)
+	assert.Equal(t, run.Run.ExecLogFile, dbRun.Run.ExecLogFile)
 }
 
 func Test_execRunExistentJob(t *testing.T) {
@@ -103,28 +109,31 @@ func Test_execRunExistentJob(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	test.AssertString(t, jobName, run.Job.Name)
-	test.AssertInt(t, jobId, run.Job.ID)
-	test.AssertBool(t, false, run.Job.NotifyLogContent)
+	execLog := test.NewLogFromFileOrFail(run.Run.ExecLogFile)
+	assert.Equal(t, jobName, run.Job.Name)
+	assert.Equal(t, jobId, run.Job.ID)
+	assert.Equal(t, false, run.Job.NotifyLogContent)
 	test.AssertFileExists(t, run.Run.ExecLogFile)
 	test.AssertFileExists(t, run.Run.LogFile)
-	test.AssertString(t, "Succeeded", run.Run.Status)
+	assert.Equal(t, "Succeeded", run.Run.Status)
 	test.AssertFileContents(t, "Output line 1\nOutput line 2\n", run.Run.LogFile)
-	test.AssertLogDoesNotHaveInfo(t, "Job not registered. Creating new job with name "+jobName, run.Run.ExecLogFile)
-	test.AssertLogHasInfo(t, "Run log created at: "+run.Run.LogFile, run.Run.ExecLogFile)
-	test.AssertLogHasInfo(t, "Run created with ID 1", run.Run.ExecLogFile)
-	test.AssertLogHasInfo(t, "Run 1 completed: Succeeded", run.Run.ExecLogFile)
-	test.AssertLogDoesNotHaveInfo(t, "Sending notify message", run.Run.ExecLogFile)
+	test.AssertLogDoesNotHaveInfo(t, "Job not registered. Creating new job with name "+jobName, execLog)
+	test.AssertLogHasInfo(t, "Run log created at: "+run.Run.LogFile, execLog)
+	runCreated := test.GetEventOrFail(t, core.EventRunCreated, execLog)
+	assert.Equal(t, int64(1), runCreated.RunId)
+	runCompleted := test.GetEventOrFail(t, core.EventRunCompleted, execLog)
+	assert.Equal(t, string(core.RunStatusSucceeded), runCompleted.RunStatus)
+	test.AssertLogDoesNotHaveInfo(t, "Sending notify message", execLog)
 
-	test.AssertInt(t, 1, dbJob.Job.ID)
-	test.AssertBool(t, false, dbJob.Job.NotifyLogContent)
-	test.AssertString(t, jobName, dbJob.Job.Name)
+	assert.Equal(t, int64(1), dbJob.Job.ID)
+	assert.Equal(t, false, dbJob.Job.NotifyLogContent)
+	assert.Equal(t, jobName, dbJob.Job.Name)
 
-	test.AssertInt(t, 1, dbRun.Run.ID)
-	test.AssertInt(t, jobId, dbRun.Run.JobID)
-	test.AssertString(t, "Succeeded", dbRun.Run.Status)
-	test.AssertString(t, run.Run.LogFile, dbRun.Run.LogFile)
-	test.AssertString(t, run.Run.ExecLogFile, dbRun.Run.ExecLogFile)
+	assert.Equal(t, int64(1), dbRun.Run.ID)
+	assert.Equal(t, jobId, dbRun.Run.JobID)
+	assert.Equal(t, "Succeeded", dbRun.Run.Status)
+	assert.Equal(t, run.Run.LogFile, dbRun.Run.LogFile)
+	assert.Equal(t, run.Run.ExecLogFile, dbRun.Run.ExecLogFile)
 }
 
 func Test_execRunScriptFails(t *testing.T) {
@@ -151,11 +160,13 @@ func Test_execRunScriptFails(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	test.AssertString(t, "Failed", run.Run.Status)
-	test.AssertString(t, "Failed", dbRun.Run.Status)
-	test.AssertLogHasInfo(t, "Run 1 completed: Failed", run.Run.ExecLogFile)
+	execLog := test.NewLogFromFileOrFail(run.Run.ExecLogFile)
+	assert.Equal(t, "Failed", run.Run.Status)
+	assert.Equal(t, "Failed", dbRun.Run.Status)
+	runCompleted := test.GetEventOrFail(t, core.EventRunCompleted, execLog)
+	assert.Equal(t, string(core.RunStatusFailed), runCompleted.RunStatus)
 	test.AssertFileContents(t, "This script will fail\n", run.Run.LogFile)
-	test.AssertLogDoesNotHaveInfo(t, "Sending notify message", run.Run.ExecLogFile)
+	test.AssertLogDoesNotHaveInfo(t, "Sending notify message", execLog)
 }
 
 func Test_execRunStdoutStderr(t *testing.T) {
@@ -182,11 +193,13 @@ func Test_execRunStdoutStderr(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	test.AssertString(t, "Succeeded", run.Run.Status)
-	test.AssertString(t, "Succeeded", dbRun.Run.Status)
-	test.AssertLogHasInfo(t, "Run 1 completed: Succeeded", run.Run.ExecLogFile)
+	execLog := test.NewLogFromFileOrFail(run.Run.ExecLogFile)
+	assert.Equal(t, "Succeeded", run.Run.Status)
+	assert.Equal(t, "Succeeded", dbRun.Run.Status)
+	runCompleted := test.GetEventOrFail(t, core.EventRunCompleted, execLog)
+	assert.Equal(t, string(core.RunStatusSucceeded), runCompleted.RunStatus)
 	test.AssertFileContents(t, "Logging to stdout\nLogging to stderr\n", run.Run.LogFile)
-	test.AssertLogDoesNotHaveInfo(t, "Sending notify message", run.Run.ExecLogFile)
+	test.AssertLogDoesNotHaveInfo(t, "Sending notify message", execLog)
 }
 
 func Test_execRunSkippedRun(t *testing.T) {
@@ -229,14 +242,18 @@ func Test_execRunSkippedRun(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	test.AssertInt(t, 2, len(runs))
-	test.AssertString(t, "Skipped", skippedRun.Run.Status)
-	test.AssertString(t, "", skippedRun.Run.LogFile)
-	test.AssertLogHasWarn(t, "Skipping run 2. Job is already running.", skippedRun.Run.ExecLogFile)
-	test.AssertString(t, "Succeeded", successfulRun.Run.Status)
-	test.AssertLogHasInfo(t, "Run 1 completed: Succeeded", successfulRun.Run.ExecLogFile)
-	test.AssertLogDoesNotHaveInfo(t, "Sending notify message", skippedRun.Run.ExecLogFile)
-	test.AssertLogDoesNotHaveInfo(t, "Sending notify message", successfulRun.Run.ExecLogFile)
+	skippedLog := test.NewLogFromFileOrFail(skippedRun.Run.ExecLogFile)
+	successfulLog := test.NewLogFromFileOrFail(successfulRun.Run.ExecLogFile)
+	assert.Equal(t, 2, len(runs))
+	assert.Equal(t, "Skipped", skippedRun.Run.Status)
+	assert.Equal(t, "", skippedRun.Run.LogFile)
+	runSkipped := test.GetEventOrFail(t, core.EventRunSkipped, skippedLog)
+	assert.Equal(t, skippedRun.Run.ID, runSkipped.RunId)
+	assert.Equal(t, "Succeeded", successfulRun.Run.Status)
+	runCompleted := test.GetEventOrFail(t, core.EventRunCompleted, successfulLog)
+	assert.Equal(t, string(core.RunStatusSucceeded), runCompleted.RunStatus)
+	test.AssertLogDoesNotHaveInfo(t, "Sending notify message", skippedLog)
+	test.AssertLogDoesNotHaveInfo(t, "Sending notify message", successfulLog)
 }
 
 func Test_execRunComplexCommand(t *testing.T) {
@@ -263,8 +280,10 @@ func Test_execRunComplexCommand(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	test.AssertString(t, "Succeeded", run.Run.Status)
-	test.AssertString(t, "Succeeded", dbRun.Run.Status)
-	test.AssertLogHasInfo(t, "Run 1 completed: Succeeded", run.Run.ExecLogFile)
+	execLog := test.NewLogFromFileOrFail(run.Run.ExecLogFile)
+	assert.Equal(t, "Succeeded", run.Run.Status)
+	assert.Equal(t, "Succeeded", dbRun.Run.Status)
+	runCompleted := test.GetEventOrFail(t, core.EventRunCompleted, execLog)
+	assert.Equal(t, string(core.RunStatusSucceeded), runCompleted.RunStatus)
 	test.AssertFileContents(t, "Testing again...\nAND AGAIN...\n", run.Run.LogFile)
 }

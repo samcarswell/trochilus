@@ -2,6 +2,7 @@ package test
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -19,6 +20,7 @@ import (
 	"github.com/samcarswell/trochilus/config"
 	"github.com/samcarswell/trochilus/core"
 	"github.com/samcarswell/trochilus/data"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -28,9 +30,15 @@ var (
 )
 
 type logRow struct {
-	Time  time.Time `json:"time"`
-	Level string    `json:"level"`
-	Msg   string    `json:"msg"`
+	Time      time.Time      `json:"time"`
+	Level     string         `json:"level"`
+	Msg       string         `json:"msg"`
+	Event     string         `json:"event"`
+	RunId     int64          `json:"run_id"`
+	JobName   string         `json:"job_name"`
+	RunStatus string         `json:"run_status"`
+	RunPid    int            `json:"run_pid"`
+	Data      map[string]any `json:"data"`
 }
 
 func MigrationsDir() string {
@@ -76,47 +84,14 @@ func CreateJsonLogger(logFile *os.File) *slog.Logger {
 	}))
 }
 
-func GetInfoLogLineStartingWith(t *testing.T, text string, path string) logRow {
-	return getLogLineStartingWith(t, "INFO", text, path)
-}
-
-func getLogLineStartingWith(t *testing.T, level string, text string, path string) logRow {
-	file, err := os.Open(path)
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		var row logRow
-		err := json.Unmarshal([]byte(scanner.Text()), &row)
-		if err != nil {
-			t.Fatal(err.Error())
-		}
-		if row.Level == level && strings.HasPrefix(row.Msg, text) {
+func GetInfoLogLineStartingWith(t *testing.T, text string, log Log) logRow {
+	for _, row := range log.Rows {
+		if row.Level == "INFO" && strings.HasPrefix(row.Msg, text) {
 			return row
 		}
 	}
-	t.Fatalf("log line with level %s and message: %s not found", level, text)
+	t.Fatalf("log line with level %s and message: %s not found", "INFO", text)
 	return logRow{}
-}
-
-func AssertInt[V int | int8 | int16 | int32 | int64](t *testing.T, expected V, actual V) {
-	if actual != expected {
-		t.Fatalf("incorrect result: expected %d, got %d", expected, actual)
-	}
-}
-
-func AssertString(t *testing.T, expected string, actual string) {
-	if actual != expected {
-		t.Fatalf("incorrect result: expected %s, got %s", expected, actual)
-	}
-}
-
-func AssertBool(t *testing.T, expected bool, actual bool) {
-	if actual != expected {
-		t.Fatalf("incorrect result: expected %t, got %t", expected, actual)
-	}
 }
 
 func AssertFileExists(t *testing.T, path string) {
@@ -127,7 +102,7 @@ func AssertFileExists(t *testing.T, path string) {
 
 func AssertFileInDirectory(t *testing.T, dir string, path string) {
 	fileDir := filepath.Dir(path)
-	AssertString(t, dir, fileDir)
+	assert.Equal(t, dir, fileDir)
 }
 
 func AssertFileContents(t *testing.T, expected string, path string) {
@@ -135,57 +110,94 @@ func AssertFileContents(t *testing.T, expected string, path string) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	AssertString(t, expected, string(file))
+	assert.Equal(t, expected, string(file))
 }
 
-func AssertLogHasInfo(t *testing.T, text string, path string) {
-	assertLogHasLine(t, "INFO", text, path)
-}
-
-func AssertLogHasWarn(t *testing.T, text string, path string) {
-	assertLogHasLine(t, "WARN", text, path)
-}
-
-func AssertLogDoesNotHaveInfo(t *testing.T, text string, path string) {
-	assertLogDoesNotHaveLine(t, "INFO", text, path)
-}
-
-func assertLogHasLine(t *testing.T, level string, text string, path string) {
-	file, err := os.Open(path)
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		var row logRow
-		err := json.Unmarshal([]byte(scanner.Text()), &row)
-		if err != nil {
-			t.Fatal(err.Error())
+func GetEventOrFail(t *testing.T, event core.Event, log Log) *logRow {
+	for _, row := range log.Rows {
+		if row.Event == string(event) {
+			return &row
 		}
+	}
+	t.Fatalf("log does not contain event %s", string(event))
+
+	return nil
+}
+
+func AssertLogHasInfo(t *testing.T, text string, log Log) {
+	assertLogHasLine(t, "INFO", text, log)
+}
+
+func AssertLogHasWarn(t *testing.T, text string, log Log) {
+	assertLogHasLine(t, "WARN", text, log)
+}
+
+func AssertLogDoesNotHaveInfo(t *testing.T, text string, log Log) {
+	assertLogDoesNotHaveLine(t, "INFO", text, log)
+}
+
+func assertLogHasLine(t *testing.T, level string, text string, log Log) {
+	for _, row := range log.Rows {
 		if row.Level == level && row.Msg == text {
 			return
 		}
 	}
-
 	t.Fatalf("log does not contain line with level %s and message: %s", level, text)
 }
 
-func assertLogDoesNotHaveLine(t *testing.T, level string, text string, path string) {
-	file, err := os.Open(path)
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		var row logRow
-		err := json.Unmarshal([]byte(scanner.Text()), &row)
-		if err != nil {
-			t.Fatal(err.Error())
-		}
+func assertLogDoesNotHaveLine(t *testing.T, level string, text string, log Log) {
+	for _, row := range log.Rows {
 		if row.Level == level && row.Msg == text {
 			t.Fatalf("log contains line with level %s and message: %s", level, text)
 		}
 	}
+}
+
+type Log struct {
+	Rows []logRow
+}
+
+func NewLogFromBuffer(data bytes.Buffer) (Log, error) {
+	r := bytes.NewReader(data.Bytes())
+	return NewLogFromReader(r)
+}
+
+func NewLogFromFileOrFail(path string) Log {
+	file, err := os.Open(path)
+	if err != nil {
+		panic(err)
+	}
+
+	defer file.Close()
+	log, err := NewLogFromReader(file)
+	if err != nil {
+		panic(err)
+	}
+	return log
+}
+
+func NewLogFromReader(reader io.Reader) (Log, error) {
+	var log = Log{}
+	scanner := bufio.NewScanner(reader)
+	for scanner.Scan() {
+		var row logRow
+		err := json.Unmarshal([]byte(scanner.Text()), &row)
+		if err != nil {
+			return Log{}, nil
+		}
+		err = json.Unmarshal([]byte(scanner.Text()), &row.Data)
+		if err != nil {
+			return Log{}, nil
+		}
+		delete(row.Data, "time")
+		delete(row.Data, "level")
+		delete(row.Data, "msg")
+		delete(row.Data, "event")
+		delete(row.Data, "run_id")
+		delete(row.Data, "job_name")
+		delete(row.Data, "run_status")
+		delete(row.Data, "run_pid")
+		log.Rows = append(log.Rows, row)
+	}
+	return log, nil
 }
