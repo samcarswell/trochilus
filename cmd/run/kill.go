@@ -66,7 +66,7 @@ This command will lookup the PID of a run and send a SIGTERM signal to it.
 		if err != nil {
 			core.LogErrorAndExit(logger, err, errors.New("unable to kill run"))
 		}
-		logger.Info("run has been sent SIGTERM signal.")
+		core.LogRunSentSigterm(logger, runId, runRow.Job.Name, int(runRow.Run.Pid.Int64))
 	},
 }
 

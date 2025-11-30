@@ -131,3 +131,109 @@ const (
 	FormatTsv    OutputFormat = "tsv"
 	FormatHtml   OutputFormat = "html"
 )
+
+const RunAttr = "run_id"
+const JobAttr = "job_name"
+const EventAttr = "event"
+const RunStatusAttr = "run_status"
+const RunPidAttr = "run_pid"
+
+type Event string
+
+const EventRunCreated Event = "run-created"
+const EventRunCompleted Event = "run-completed"
+const EventRunStarted Event = "run-started"
+const EventRunTerminated Event = "run-terminated"
+const EventRunSigterm Event = "run-sigterm"
+
+func LogRunId(runId int64) slog.Attr {
+	return slog.Int64(RunAttr, runId)
+}
+
+func LogJobName(jobName string) slog.Attr {
+	return slog.String(JobAttr, jobName)
+}
+
+func LogEvent(event Event) slog.Attr {
+	return slog.String(EventAttr, string(event))
+}
+
+func LogRunStatus(status RunStatus) slog.Attr {
+	return slog.String(RunStatusAttr, string(status))
+}
+
+func LogRunPid(pid int) slog.Attr {
+	return slog.Int(RunPidAttr, pid)
+}
+
+func LogRunCreated(
+	logger *slog.Logger,
+	runId int64,
+	jobName string,
+) {
+	logger.Info(
+		"Run created",
+		LogEvent(EventRunCreated),
+		LogRunId(runId),
+		LogJobName(jobName),
+	)
+}
+
+func LogRunCompleted(
+	logger *slog.Logger,
+	runId int64,
+	jobName string,
+	status RunStatus,
+) {
+	logger.Info(
+		"Run completed",
+		LogEvent(EventRunCompleted),
+		LogRunId(runId),
+		LogJobName(jobName),
+		LogRunStatus(status),
+	)
+}
+
+func LogRunStarted(
+	logger *slog.Logger,
+	runId int64,
+	jobName string,
+	pid int,
+) {
+	logger.Info(
+		"Run started",
+		LogEvent(EventRunStarted),
+		LogRunId(runId),
+		LogJobName(jobName),
+		LogRunPid(pid),
+	)
+}
+
+func LogRunSentSigterm(
+	logger *slog.Logger,
+	runId int64,
+	jobName string,
+	pid int,
+) {
+	logger.Info(
+		"Run sent SIGTERM",
+		LogEvent(EventRunSigterm),
+		LogRunId(runId),
+		LogJobName(jobName),
+		LogRunPid(pid),
+	)
+}
+
+func LogRunTerminated(
+	logger *slog.Logger,
+	runId int64,
+	jobName string,
+	signalErr string,
+) {
+	logger.Error(
+		"Run has been terminated: "+signalErr,
+		LogEvent(EventRunTerminated),
+		LogRunId(runId),
+		LogJobName(jobName),
+	)
+}

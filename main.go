@@ -5,7 +5,6 @@ package main
 
 import (
 	"embed"
-	_ "embed"
 
 	"github.com/samcarswell/trochilus/cmd"
 	_ "github.com/samcarswell/trochilus/cmd/exec"

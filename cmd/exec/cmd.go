@@ -161,8 +161,7 @@ func execRun(
 	if err != nil {
 		core.LogErrorAndExit(logger, err, errors.New("unable to start run"))
 	}
-
-	logger.Info("Run created with ID " + strconv.FormatInt(runId, 10))
+	core.LogRunCreated(logger, runId, jobName)
 
 	cmdArgs := []string{"-c"}
 	cmdArgs = append(cmdArgs, args[0])
@@ -188,6 +187,7 @@ func execRun(
 		logger.Error("Failed to start run: " + err.Error())
 		status = core.RunStatusFailed
 	} else {
+		core.LogRunStarted(logger, runId, jobName, runCmd.Process.Pid)
 		err := db.UpdateRunPid(ctx, data.UpdateRunPidParams{
 			ID: runId,
 			Pid: sql.NullInt64{
@@ -205,7 +205,7 @@ func execRun(
 		err = runCmd.Wait()
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "signal: ") {
-				logger.Error("Run has been terminated: " + err.Error())
+				core.LogRunTerminated(logger, runId, jobName, err.Error())
 				status = core.RunStatusTerminated
 			} else {
 				logger.Error("Error occurred during run", "error", err)
@@ -218,7 +218,7 @@ func execRun(
 		Status: string(status),
 		ID:     runId,
 	})
-	logger.Info("Run " + strconv.FormatInt(runId, 10) + " completed: " + string(status))
+	core.LogRunCompleted(logger, runId, jobName, status)
 
 	completedRun, err := db.GetRun(ctx, runId)
 	if err != nil {
