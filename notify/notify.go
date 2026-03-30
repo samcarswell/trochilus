@@ -36,7 +36,12 @@ func NotifyRun(
 	conf config.Config,
 	run RunNotifyInfo,
 ) (bool, error) {
-	slackStr := getNotifyText(run, conf.Notify.Hostname, conf.Display.Emoji)
+	slackStr := getNotifyText(
+		run,
+		conf.Notify.Status,
+		conf.Notify.Hostname,
+		conf.Display.Emoji,
+	)
 	return notifySlack(conf.Notify.Slack, slackStr)
 }
 
@@ -45,13 +50,14 @@ func NotifyRun(
 // is critical; if it's missing some information, that's acceptable.
 func getNotifyText(
 	run RunNotifyInfo,
+	tagStatuses config.StatusConfig,
 	hostname string,
 	showEmoji bool,
 ) string {
 	return "*" + run.Name + hostnameIfExists(hostname) + "*: run " +
 		strconv.FormatInt(run.Id, 10) + " - " +
 		core.FormatStatus(run.Status, showEmoji) +
-		tagChannelIfFail(run.Status) +
+		tagChannelIfStatusConfigured(run.Status, tagStatuses) +
 		logFileAndOutput(run.NotifyLogContent, run.LogFile)
 }
 
@@ -84,8 +90,15 @@ func logFileIfExists(logFile string) string {
 	return "\nLog: `" + logFile + "`"
 }
 
-func tagChannelIfFail(status core.RunStatus) string {
-	if status == core.RunStatusFailed {
+func tagChannelIfStatusConfigured(
+	status core.RunStatus,
+	tagStatuses config.StatusConfig,
+) string {
+	if (status == core.RunStatusRunning && tagStatuses.Running) ||
+		(status == core.RunStatusSkipped && tagStatuses.Skipped) ||
+		(status == core.RunStatusSucceeded && tagStatuses.Succeeded) ||
+		(status == core.RunStatusFailed && tagStatuses.Failed) ||
+		(status == core.RunStatusTerminated && tagStatuses.Terminated) {
 		return " <!channel>"
 	}
 	return ""

@@ -154,6 +154,7 @@ func GetLogFileOrExit(logger *slog.Logger, ctx context.Context) string {
 type NotifyConfig struct {
 	Hostname string
 	Slack    SlackConfig
+	Status   StatusConfig
 }
 
 type SlackConfig struct {
@@ -161,7 +162,7 @@ type SlackConfig struct {
 	Channel string
 }
 
-type ColorStatusConfig struct {
+type StatusConfig struct {
 	Succeeded  bool
 	Failed     bool
 	Running    bool
@@ -170,7 +171,7 @@ type ColorStatusConfig struct {
 }
 
 type ColorConfig struct {
-	Status ColorStatusConfig
+	Status StatusConfig
 }
 
 type DisplayConfig struct {
@@ -199,11 +200,18 @@ func GetConfig() Config {
 				Token:   viper.GetString("notify.slack.token"),
 				Channel: viper.GetString("notify.slack.channel"),
 			},
+			Status: StatusConfig{
+				Succeeded:  viper.GetBool("notify.status.succeeded"),
+				Failed:     viper.GetBool("notify.status.failed"),
+				Running:    viper.GetBool("notify.status.running"),
+				Skipped:    viper.GetBool("notify.status.skipped"),
+				Terminated: viper.GetBool("notify.status.terminated"),
+			},
 		},
 		Display: DisplayConfig{
 			Emoji: viper.GetBool("display.emoji"),
 			Color: ColorConfig{
-				Status: ColorStatusConfig{
+				Status: StatusConfig{
 					Succeeded:  viper.GetBool("display.color.status.succeeded"),
 					Failed:     viper.GetBool("display.color.status.failed"),
 					Running:    viper.GetBool("display.color.status.running"),
