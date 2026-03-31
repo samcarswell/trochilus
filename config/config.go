@@ -93,11 +93,12 @@ func CreateOrUpdateDatabase(
 	dbPath string,
 	migrationsDir string,
 ) *sql.DB {
+	logger := slog.Default()
 	fileName := path.Base(dbPath)
 	dir := path.Dir(dbPath)
 	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
-		core.LogErrorAndExit(slog.Default(), err, errors.New("unable to create database path "+dir))
+		core.LogErrorAndExit(logger, err, errors.New("unable to create database path "+dir))
 	}
 	u, _ := url.Parse("sqlite3:///" + dbPath)
 	dbMateDb := dbmate.New(u)
@@ -105,19 +106,39 @@ func CreateOrUpdateDatabase(
 	dbMateDb.AutoDumpSchema = false
 	dbMateDb.MigrationsDir = []string{migrationsDir}
 	dblog := dbLogger{
-		Logger: slog.Default(),
+		Logger: logger,
 	}
 	dbMateDb.Log = dblog
 
 	err = dbMateDb.CreateAndMigrate()
 	if err != nil {
-		core.LogErrorAndExit(slog.Default(), err, errors.New("unable to update database"))
+		core.LogErrorAndExit(logger, err, errors.New("unable to update database"))
 	}
 	db, err := sql.Open("sqlite", path.Join(dir, fileName)+"?mode=rw")
 	if err != nil {
-		core.LogErrorAndExit(slog.Default(), err, errors.New("unable to open database"))
+		core.LogErrorAndExit(logger, err, errors.New("unable to open database"))
 	}
-	db.Exec("PRAGMA journal_mode=WAL;")
+	databaseConfigErr := errors.New("error configuring database connection")
+	_, err = db.Exec("PRAGMA journal_mode=WAL;")
+	if err != nil {
+		core.LogErrorAndExit(logger, err, databaseConfigErr)
+	}
+	_, err = db.Exec("PRAGMA busy_timeout=5000;")
+	if err != nil {
+		core.LogErrorAndExit(logger, err, databaseConfigErr)
+	}
+	_, err = db.Exec("PRAGMA synchronous=NORMAL;")
+	if err != nil {
+		core.LogErrorAndExit(logger, err, databaseConfigErr)
+	}
+	_, err = db.Exec("PRAGMA cache_size=-20000;")
+	if err != nil {
+		core.LogErrorAndExit(logger, err, databaseConfigErr)
+	}
+	_, err = db.Exec("PRAGMA foreign_keys=true;")
+	if err != nil {
+		core.LogErrorAndExit(logger, err, databaseConfigErr)
+	}
 	return db
 }
 
