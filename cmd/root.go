@@ -106,6 +106,11 @@ func init() {
 	viper.SetDefault("display.color.status.running", false)
 	viper.SetDefault("display.color.status.skipped", false)
 	viper.SetDefault("display.color.status.terminated", false)
+	viper.SetDefault("notify.status.succeeded", false)
+	viper.SetDefault("notify.status.failed", true)
+	viper.SetDefault("notify.status.running", false)
+	viper.SetDefault("notify.status.skipped", false)
+	viper.SetDefault("notify.status.terminated", true)
 
 	confPath, ok := os.LookupEnv("TROC_CONFIG_PATH")
 	if !ok {

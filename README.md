@@ -2,15 +2,9 @@
 
 Simple cron (or any script) monitoring
 
-Named after the legendary bird described by Herodotus in [The Histories](https://en.wikipedia.org/wiki/Trochilus_(crocodile_bird)).
-<p>
-    <p>
-        <img width="512" alt="TheCronsFriend" src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/PloverCrocodileSymbiosis.jpg/512px-PloverCrocodileSymbiosis.jpg?20130116123116">
-    </p>
-    <p>
-        <em>The Cron's Friend</em>
-    </p>
-</p>
+<img src="static/the-crons-friend.jpg" alt="The Cron's Friend" width="512"/>
+
+*The Cron's Friend* - Named after the legendary bird described by Herodotus in [The Histories](https://en.wikipedia.org/wiki/Trochilus_(crocodile_bird)).
 
 ## Features
 
@@ -19,7 +13,7 @@ Named after the legendary bird described by Herodotus in [The Histories](https:/
 - Keeps a history of all job runs in a local sqlite database.
 - Query job runs using the `troc` cli.
 - Flock functionality; ensures that only one instance of a job is ran at a time; keeps a log of skipped runs.
-- Posts run results to slack; tags `@channel` on failure.
+- Posts run results to slack; configurable tagging of `@channel` based on run status.
 - Single executable; no daemon.
 
 ## Build
@@ -107,6 +101,11 @@ eg. `TROC_DATABASE` or `TROC_NOTIFY_SLACK_TOKEN`.
 | `notify.hostname` | Name of server when pushing notifications. eg. `job-name@hostname` | Output of `hostname` |
 | `notify.slack.token` | Token for slack app. | 
 | `notify.slack.channel` | Slack channel to post notifications. | 
+| `notify.status.succeeded` | Tags `@channel` for `Succeeded` status. | `false`
+| `notify.status.failed` | Tags `@channel` for `Failed` status. | `true`
+| `notify.status.running` | Tags `@channel` for `Running` status. | `false`
+| `notify.status.skipped` | Tags `@channel` for `Skipped` status. | `false`
+| `notify.status.terminated` | Tags `@channel` for `Terminated` status. | `true`
 | `display.emoji` | Displays emojis. | `true`
 | `display.color.status.succeeded` | Colours text output for `Succeeded` status. | `false`
 | `display.color.status.failed` | Colours text output for `Failed` status. | `false`

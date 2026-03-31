@@ -93,11 +93,12 @@ func CreateOrUpdateDatabase(
 	dbPath string,
 	migrationsDir string,
 ) *sql.DB {
+	logger := slog.Default()
 	fileName := path.Base(dbPath)
 	dir := path.Dir(dbPath)
 	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
-		core.LogErrorAndExit(slog.Default(), err, errors.New("unable to create database path "+dir))
+		core.LogErrorAndExit(logger, err, errors.New("unable to create database path "+dir))
 	}
 	u, _ := url.Parse("sqlite3:///" + dbPath)
 	dbMateDb := dbmate.New(u)
@@ -105,19 +106,39 @@ func CreateOrUpdateDatabase(
 	dbMateDb.AutoDumpSchema = false
 	dbMateDb.MigrationsDir = []string{migrationsDir}
 	dblog := dbLogger{
-		Logger: slog.Default(),
+		Logger: logger,
 	}
 	dbMateDb.Log = dblog
 
 	err = dbMateDb.CreateAndMigrate()
 	if err != nil {
-		core.LogErrorAndExit(slog.Default(), err, errors.New("unable to update database"))
+		core.LogErrorAndExit(logger, err, errors.New("unable to update database"))
 	}
 	db, err := sql.Open("sqlite", path.Join(dir, fileName)+"?mode=rw")
 	if err != nil {
-		core.LogErrorAndExit(slog.Default(), err, errors.New("unable to open database"))
+		core.LogErrorAndExit(logger, err, errors.New("unable to open database"))
 	}
-	db.Exec("PRAGMA journal_mode=WAL;")
+	databaseConfigErr := errors.New("error configuring database connection")
+	_, err = db.Exec("PRAGMA journal_mode=WAL;")
+	if err != nil {
+		core.LogErrorAndExit(logger, err, databaseConfigErr)
+	}
+	_, err = db.Exec("PRAGMA busy_timeout=5000;")
+	if err != nil {
+		core.LogErrorAndExit(logger, err, databaseConfigErr)
+	}
+	_, err = db.Exec("PRAGMA synchronous=NORMAL;")
+	if err != nil {
+		core.LogErrorAndExit(logger, err, databaseConfigErr)
+	}
+	_, err = db.Exec("PRAGMA cache_size=-20000;")
+	if err != nil {
+		core.LogErrorAndExit(logger, err, databaseConfigErr)
+	}
+	_, err = db.Exec("PRAGMA foreign_keys=true;")
+	if err != nil {
+		core.LogErrorAndExit(logger, err, databaseConfigErr)
+	}
 	return db
 }
 
@@ -154,6 +175,7 @@ func GetLogFileOrExit(logger *slog.Logger, ctx context.Context) string {
 type NotifyConfig struct {
 	Hostname string
 	Slack    SlackConfig
+	Status   StatusConfig
 }
 
 type SlackConfig struct {
@@ -161,7 +183,7 @@ type SlackConfig struct {
 	Channel string
 }
 
-type ColorStatusConfig struct {
+type StatusConfig struct {
 	Succeeded  bool
 	Failed     bool
 	Running    bool
@@ -170,7 +192,7 @@ type ColorStatusConfig struct {
 }
 
 type ColorConfig struct {
-	Status ColorStatusConfig
+	Status StatusConfig
 }
 
 type DisplayConfig struct {
@@ -199,11 +221,18 @@ func GetConfig() Config {
 				Token:   viper.GetString("notify.slack.token"),
 				Channel: viper.GetString("notify.slack.channel"),
 			},
+			Status: StatusConfig{
+				Succeeded:  viper.GetBool("notify.status.succeeded"),
+				Failed:     viper.GetBool("notify.status.failed"),
+				Running:    viper.GetBool("notify.status.running"),
+				Skipped:    viper.GetBool("notify.status.skipped"),
+				Terminated: viper.GetBool("notify.status.terminated"),
+			},
 		},
 		Display: DisplayConfig{
 			Emoji: viper.GetBool("display.emoji"),
 			Color: ColorConfig{
-				Status: ColorStatusConfig{
+				Status: StatusConfig{
 					Succeeded:  viper.GetBool("display.color.status.succeeded"),
 					Failed:     viper.GetBool("display.color.status.failed"),
 					Running:    viper.GetBool("display.color.status.running"),
