@@ -255,10 +255,6 @@ at startup; so just adding the migration file to that directory is enough.
 
 `go test ./...`
 
-### Test coverage
-
-`./coverage` to open a browser with the test coverage info.
-
 ## Goals
 
 - TUI interface.
