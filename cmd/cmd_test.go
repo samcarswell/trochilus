@@ -90,6 +90,8 @@ func Test_Kill(t *testing.T) {
 	sigtermEvent := test.GetEventOrFail(t, core.EventRunSigterm, runKill)
 	assert.Equal(t, runStartedEvent.RunPid, sigtermEvent.RunPid)
 
+	time.Sleep(10 * time.Millisecond)
+
 	logKilled := killedRunCmd.ExecLogOrFail()
 	terminatedEvent := test.GetEventOrFail(t, core.EventRunTerminated, logKilled)
 	assert.Equal(t, runStartedEvent.RunId, terminatedEvent.RunId)

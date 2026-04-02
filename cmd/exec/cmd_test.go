@@ -237,7 +237,10 @@ func Test_execRunSkippedRun(t *testing.T) {
 		[]string{"./testdata/script-passes"},
 	)
 	successfulRun := <-blocked
-	runs, err := db.GetRuns(ctx, "")
+	runs, err := db.GetRuns(ctx, data.GetRunsParams{
+		Column1: "",
+		Column2: false,
+	})
 	if err != nil {
 		t.Fatal(err.Error())
 	}
