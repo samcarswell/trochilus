@@ -172,6 +172,10 @@ func GetLogFileOrExit(logger *slog.Logger, ctx context.Context) string {
 	return logFile
 }
 
+type CleanConfig struct {
+	Days int
+}
+
 type NotifyConfig struct {
 	Hostname string
 	Slack    SlackConfig
@@ -204,6 +208,7 @@ type Config struct {
 	Database  string
 	LockDir   string
 	LogDir    string
+	Clean     CleanConfig
 	Notify    NotifyConfig
 	LocalTime bool
 	Display   DisplayConfig
@@ -211,9 +216,12 @@ type Config struct {
 
 func GetConfig() Config {
 	return Config{
-		Database:  viper.GetString("database"),
-		LockDir:   viper.GetString("lockdir"),
-		LogDir:    viper.GetString("logdir"),
+		Database: viper.GetString("database"),
+		LockDir:  viper.GetString("lockdir"),
+		LogDir:   viper.GetString("logdir"),
+		Clean: CleanConfig{
+			Days: viper.GetInt("clean.days"),
+		},
 		LocalTime: viper.GetBool("localtime"),
 		Notify: NotifyConfig{
 			Hostname: viper.GetString("notify.hostname"),

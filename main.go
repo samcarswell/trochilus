@@ -7,6 +7,7 @@ import (
 	"embed"
 
 	"github.com/samcarswell/trochilus/cmd"
+	_ "github.com/samcarswell/trochilus/cmd/clean"
 	_ "github.com/samcarswell/trochilus/cmd/exec"
 	_ "github.com/samcarswell/trochilus/cmd/job"
 	_ "github.com/samcarswell/trochilus/cmd/run"

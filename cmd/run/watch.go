@@ -33,6 +33,10 @@ var watchCmd = &cobra.Command{
 				core.LogErrorAndExit(logger, err)
 			}
 		}
+		if runRow.Run.IsArchived {
+			logger.Warn("Run " + strconv.FormatInt(runId, 10) + " is archived: the log has been removed")
+			return
+		}
 
 		file, err := os.Open(runRow.Run.LogFile)
 		if err != nil {
