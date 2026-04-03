@@ -63,44 +63,47 @@ var cleanCmd = &cobra.Command{
 			}
 		}
 
-		pattern := path.Join(conf.LogDir, "trocsys_*")
-
-		files, err := filepath.Glob(pattern)
+		err = clearSystemLogs(conf.LogDir, cleanTime, logger)
 		if err != nil {
 			core.LogErrorAndExit(logger, err)
-		}
-		for _, file := range files {
-			segments := strings.Split(file, "_")
-			if len(segments) != 3 {
-				logger.Warn("log file not recognised." + file + ". skipping")
-				continue
-			}
-			subSegments := strings.Split(segments[2], ".")
-			if len(subSegments) != 2 {
-				logger.Warn("file not recognised." + file + ". skipping")
-				continue
-			}
-			ts, err := time.Parse("20060102T150405", subSegments[0])
-			if err != nil {
-				logger.Error("unable to parse file: " + file + ". skipping")
-				continue
-			}
-			if cleanTime.After(ts.UTC()) {
-				logger.Info("removing syslog file " + file)
-				err = os.Remove(file)
-				if err != nil {
-					logger.Error("unable to delete syslog file " + file)
-					continue
-				}
-				logger.Info("deleted syslog file " + file)
-			}
 		}
 	},
 }
 
-func MoreThanXDays(date time.Time, days int) bool {
-	daysAgo := time.Now().UTC().AddDate(0, 0, -days)
-	return date.Before(daysAgo)
+func clearSystemLogs(dir string, cleanTime time.Time, logger *slog.Logger) error {
+	pattern := path.Join(dir, "trocsys_*")
+
+	files, err := filepath.Glob(pattern)
+	if err != nil {
+		return err
+	}
+	for _, file := range files {
+		segments := strings.Split(file, "_")
+		if len(segments) != 3 {
+			logger.Warn("log file not recognised: " + file + ". skipping")
+			continue
+		}
+		subSegments := strings.Split(segments[2], ".")
+		if len(subSegments) != 2 {
+			logger.Warn("file not recognised: " + file + ". skipping")
+			continue
+		}
+		ts, err := time.Parse("20060102T150405", subSegments[0])
+		if err != nil {
+			logger.Error("unable to parse file: " + file + ". skipping")
+			continue
+		}
+		if cleanTime.After(ts.UTC()) {
+			logger.Info("removing syslog file " + file)
+			err = os.Remove(file)
+			if err != nil {
+				logger.Error("unable to delete syslog file " + file)
+				continue
+			}
+			logger.Info("deleted syslog file " + file)
+		}
+	}
+	return nil
 }
 
 func init() {

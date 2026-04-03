@@ -136,6 +136,10 @@ func AssertLogDoesNotHaveInfo(t *testing.T, text string, log Log) {
 	assertLogDoesNotHaveLine(t, "INFO", text, log)
 }
 
+func AssertLogDoesNotHaveWarn(t *testing.T, text string, log Log) {
+	assertLogDoesNotHaveLine(t, "WARN", text, log)
+}
+
 func assertLogHasLine(t *testing.T, level string, text string, log Log) {
 	for _, row := range log.Rows {
 		if row.Level == level && row.Msg == text {
