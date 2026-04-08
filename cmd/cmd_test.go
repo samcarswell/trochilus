@@ -102,3 +102,22 @@ func Test_Kill(t *testing.T) {
 	run := test.CmdConv[[]core.RunShow](runCmd)[0]
 	assert.Equal(t, string(core.RunStatusTerminated), run.Status)
 }
+
+func Test_ParentEnvAccessibleToRun(t *testing.T) {
+	err := os.Setenv("TEST_ENVVAR", "test-value")
+	if err != nil {
+		panic(err)
+	}
+	cli := test.NewTrocCli(t, trocExe)
+	exec := cli.Base.Exec("test-env", "echo $TEST_ENVVAR")
+	exec.Run()
+
+	var runInfo core.RunShow
+	err = json.Unmarshal(exec.Stdout.Bytes(), &runInfo)
+	if err != nil {
+		panic(err)
+	}
+	assert.FileExists(t, runInfo.LogFile)
+	assert.FileExists(t, runInfo.SystemLogFile)
+	test.AssertFileContents(t, "test-value\n", runInfo.LogFile)
+}
