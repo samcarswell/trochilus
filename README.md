@@ -201,7 +201,7 @@ the run will still correctly update it's state once it completes.
 
 ### Archive a run
 
-Use `troc run archive` to archive a run; this will removing all log files,
+Use `troc run archive` to archive a run; this will remove all log files,
 and hide it from appearing in `troc run list`.
 
 ### Run history
@@ -220,9 +220,7 @@ This will include the raw run output in the slack message:
 
 ```markdown
 daily-sync@example-server: run 84 - ✅: Succeeded
-```
 This is output from the job
-```
 ```
 
 ### Clean old runs and system log files
