@@ -40,6 +40,7 @@ var showCmd = &cobra.Command{
 			Status:        runRow.Run.Status,
 			Pid:           core.FormatPid(runRow.Run.Pid),
 			Duration:      core.FormatDuration(runRow.Run.StartTime, runRow.Run.EndTime.Time),
+			IsArchived:    runRow.Run.IsArchived,
 		}
 		core.PrintJson(data)
 	},
