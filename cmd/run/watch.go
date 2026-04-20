@@ -39,6 +39,7 @@ var watchCmd = &cobra.Command{
 
 		file, err := os.Open(runRow.Run.LogFile)
 		if err != nil {
+			core.LogErrorAndExit(logger, fmt.Errorf("log file cannot be read: %w", err))
 			return
 		}
 		defer file.Close()
