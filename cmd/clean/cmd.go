@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/samcarswell/trochilus/cmd"
+	"github.com/samcarswell/trochilus/cmd/lib"
 	"github.com/samcarswell/trochilus/config"
 	"github.com/samcarswell/trochilus/core"
 	"github.com/spf13/cobra"
@@ -41,36 +42,21 @@ var cleanCmd = &cobra.Command{
 			logger.Info("No runs found.")
 		}
 		for _, run := range runs {
-			runIdStr := strconv.Itoa(int(run.Run.ID))
-			logger.Info("Archiving run " + runIdStr)
-			err := queries.ArchiveRun(ctx, run.Run.ID)
+			err := lib.ArchiveRun(ctx, queries, run.Run, logger)
 			if err != nil {
 				logger.Error("Failed to archive run", "err", err)
 				continue
 			}
-			logErr := os.Remove(run.Run.LogFile)
-			if logErr != nil {
-				logger.Error("Failed to delete run log file", "err", logErr)
-			}
-			sysLogErr := os.Remove(run.Run.ExecLogFile)
-			if sysLogErr != nil {
-				logger.Error("Failed to delete run system log file", "err", sysLogErr)
-			}
-			if logErr != nil || sysLogErr != nil {
-				logger.Warn("Run " + runIdStr + " was archived, but failed to remove some logs")
-			} else {
-				logger.Info("Run " + runIdStr + " succesfully deleted.")
-			}
 		}
 
-		err = clearSystemLogs(conf.LogDir, cleanTime, logger)
+		err = clearMiscSystemLogs(conf.LogDir, cleanTime, logger)
 		if err != nil {
 			core.LogErrorAndExit(logger, err)
 		}
 	},
 }
 
-func clearSystemLogs(dir string, cleanTime time.Time, logger *slog.Logger) error {
+func clearMiscSystemLogs(dir string, cleanTime time.Time, logger *slog.Logger) error {
 	pattern := path.Join(dir, "trocsys_*")
 
 	files, err := filepath.Glob(pattern)

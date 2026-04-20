@@ -35,7 +35,7 @@ func Test_clearSystemLogs(t *testing.T) {
 
 	logFile, logger := test.CreateSysLogFile(t)
 
-	err = clearSystemLogs(rootDir, time.Now().AddDate(0, 0, -30), logger)
+	err = clearMiscSystemLogs(rootDir, time.Now().AddDate(0, 0, -30), logger)
 	if err != nil {
 		t.Fatal(err)
 	}

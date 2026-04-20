@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -120,4 +121,59 @@ func Test_ParentEnvAccessibleToRun(t *testing.T) {
 	assert.FileExists(t, runInfo.LogFile)
 	assert.FileExists(t, runInfo.SystemLogFile)
 	test.AssertFileContents(t, "test-value\n", runInfo.LogFile)
+}
+
+func Test_ArchiveRun(t *testing.T) {
+	cli := test.NewTrocCli(t, trocExe)
+	exec := cli.Base.Exec("test-env", "echo 'working'")
+	exec.Run()
+	var runInfo core.RunShow
+	err := json.Unmarshal(exec.Stdout.Bytes(), &runInfo)
+	if err != nil {
+		panic(err)
+	}
+
+	assert.Equal(t, false, runInfo.IsArchived)
+
+	runCmd := cli.Base.Run.List()
+	runCmd.Run()
+	runs := test.CmdConv[[]core.RunShow](runCmd)
+	var run1 core.RunShow
+	for _, r := range runs {
+		if r.ID == runInfo.ID {
+			run1 = r
+			break
+		}
+	}
+	assert.NotEmpty(t, run1)
+
+	archiveCmd := cli.Base.Run.Archive(runInfo.ID)
+	archiveCmd.Run()
+
+	log := archiveCmd.ExecLogOrFail()
+	test.AssertLogHasInfo(t, "Run "+strconv.Itoa(int(runInfo.ID))+" successfully archived.", log)
+
+	runCmd2 := cli.Base.Run.List()
+	runCmd2.Run()
+	runs2 := test.CmdConv[[]core.RunShow](runCmd2)
+	var run2 core.RunShow
+	for _, r := range runs2 {
+		if r.ID == runInfo.ID {
+			run2 = r
+			break
+		}
+	}
+	assert.Empty(t, run2)
+
+	runCmd3 := cli.Base.Run.ListArchived()
+	runCmd3.Run()
+	runs3 := test.CmdConv[[]core.RunShow](runCmd3)
+	var run3 core.RunShow
+	for _, r := range runs3 {
+		if r.ID == runInfo.ID {
+			run3 = r
+			break
+		}
+	}
+	assert.NotEmpty(t, run3)
 }
