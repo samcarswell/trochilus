@@ -123,7 +123,7 @@ func CreateOrUpdateDatabase(
 	confDbErrMsg := "error configuring database connection"
 
 	for range 10 {
-		_, err = db.Exec("PRAGMA busy_timeout=5000;")
+		_, err = db.Exec("PRAGMA busy_timeout=10000;")
 		if err == nil {
 			break
 		}
