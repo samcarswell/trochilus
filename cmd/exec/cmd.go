@@ -133,6 +133,7 @@ func execRun(
 			db,
 			context.Background(),
 			logger,
+			isNotify,
 		)
 	}
 	if !locked {
@@ -253,6 +254,7 @@ func skipRun(
 	queries *data.Queries,
 	ctx context.Context,
 	logger *slog.Logger,
+	isNotify bool,
 ) data.GetRunRow {
 	id, err := queries.SkipRun(ctx, data.SkipRunParams{
 		JobID:       job.ID,
@@ -268,16 +270,24 @@ func skipRun(
 		core.LogErrorAndExit(logger, err, errors.New("unable to get updated run"))
 	}
 	core.LogRunSkipped(logger, id, job.Name)
-	notify.NotifyRun(
-		conf,
-		notify.RunNotifyInfo{
-			Name:             run.Job.Name,
-			Id:               run.Run.ID,
-			Status:           core.RunStatus(run.Run.Status),
-			LogFile:          "",
-			NotifyLogContent: job.NotifyLogContent,
-		},
-	)
+	if isNotify {
+		ok, err := notify.NotifyRun(
+			conf,
+			notify.RunNotifyInfo{
+				Name:             run.Job.Name,
+				Id:               run.Run.ID,
+				Status:           core.RunStatus(run.Run.Status),
+				LogFile:          "",
+				NotifyLogContent: job.NotifyLogContent,
+			},
+		)
+		if err != nil {
+			core.LogErrorAndExit(logger, err, errors.New("unable to notify"))
+		}
+		if !ok {
+			logger.Error("command was run, but notification was unable to be sent")
+		}
+	}
 	row, err := queries.GetRun(ctx, run.Run.ID)
 	if err != nil {
 		core.LogErrorAndExit(logger, err, errors.New("unable to get updated run"))

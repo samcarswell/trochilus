@@ -230,7 +230,7 @@ func Test_execRunSkippedRun(t *testing.T) {
 		ctx,
 		logger2,
 		jobName,
-		true,
+		false,
 		conf,
 		db,
 		logFile2,
