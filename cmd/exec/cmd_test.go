@@ -225,12 +225,12 @@ func Test_execRunSkippedRun(t *testing.T) {
 			[]string{"./testdata/script-sleeps"},
 		)
 	}()
-	time.Sleep(5 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 	skippedRun := execRun(
 		ctx,
 		logger2,
 		jobName,
-		true,
+		false,
 		conf,
 		db,
 		logFile2,

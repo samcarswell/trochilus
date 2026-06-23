@@ -20,6 +20,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Issue where watching a run with a removed log file would return a zero exit code.
 
+## [0.4.1] - 2026-06-16
+
+### Changed
+
+- More detailed failure logging for database connection creation.
+
+### Fixed
+
+- Issue where `SQLITE_BUSY_RECOVERY` could occur during database connection creation.
+- Slack errors are now included in run logs.
+
 ## [0.4.0] - 2026-04-01
 
 ### Added

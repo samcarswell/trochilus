@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/samcarswell/trochilus/core"
 	"github.com/samcarswell/trochilus/data"
@@ -118,26 +119,34 @@ func CreateOrUpdateDatabase(
 	if err != nil {
 		core.LogErrorAndExit(logger, err, errors.New("unable to open database"))
 	}
-	databaseConfigErr := errors.New("error configuring database connection")
+
+	confDbErrMsg := "error configuring database connection"
+
+	for range 10 {
+		_, err = db.Exec("PRAGMA busy_timeout=10000;")
+		if err == nil {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	if err != nil {
+		core.LogErrorAndExit(logger, err, errors.New(confDbErrMsg+": busy_timeout"))
+	}
 	_, err = db.Exec("PRAGMA journal_mode=WAL;")
 	if err != nil {
-		core.LogErrorAndExit(logger, err, databaseConfigErr)
-	}
-	_, err = db.Exec("PRAGMA busy_timeout=5000;")
-	if err != nil {
-		core.LogErrorAndExit(logger, err, databaseConfigErr)
+		core.LogErrorAndExit(logger, err, errors.New(confDbErrMsg+": journal_mode"))
 	}
 	_, err = db.Exec("PRAGMA synchronous=NORMAL;")
 	if err != nil {
-		core.LogErrorAndExit(logger, err, databaseConfigErr)
+		core.LogErrorAndExit(logger, err, errors.New(confDbErrMsg+": synchronous"))
 	}
 	_, err = db.Exec("PRAGMA cache_size=-20000;")
 	if err != nil {
-		core.LogErrorAndExit(logger, err, databaseConfigErr)
+		core.LogErrorAndExit(logger, err, errors.New(confDbErrMsg+": cache_size"))
 	}
 	_, err = db.Exec("PRAGMA foreign_keys=true;")
 	if err != nil {
-		core.LogErrorAndExit(logger, err, databaseConfigErr)
+		core.LogErrorAndExit(logger, err, errors.New(confDbErrMsg+": foreign_keys"))
 	}
 	return db
 }
