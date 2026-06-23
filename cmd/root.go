@@ -11,7 +11,6 @@ import (
 	"path"
 	"strings"
 
-	slogmulti "github.com/samber/slog-multi"
 	"github.com/samcarswell/trochilus/config"
 	"github.com/samcarswell/trochilus/core"
 	"github.com/spf13/cobra"
@@ -51,7 +50,7 @@ func setupContext(cmd *cobra.Command) {
 		if err != nil {
 			core.LogErrorAndExit(slog.Default(), err, errors.New("unable to create trocsys log"))
 		}
-		l = slog.New(slogmulti.Fanout(
+		l = slog.New(slog.NewMultiHandler(
 			slog.Default().Handler(),
 			slog.NewJSONHandler(logFile, core.GetSlogHandlerOptions()),
 		))
